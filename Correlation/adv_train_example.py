@@ -56,73 +56,76 @@ if __name__ == "__main__":
             assert os.path.exists('../data/' + dataset + '_data/model/' + model_name + '.h5')
 
 
-    attack_name = 'FGSM'
+    attack_names = ['FGSM']
+    for attack_name in attack_names:
+        for dataset in datasets:
+            for model_name in model_dict[dataset]:
+                x_train, y_train, x_test, y_test = load_data(dataset)
 
 
-    x_train, y_train, x_test, y_test = load_data(dataset)
+                from keras.models import load_model
+                model = load_model('../data/' + dataset + '_data/model/' + model_name + '.h5')
+
+                # ## for svhn model
+                # from util import get_model
+                # model = get_model(dataset, True)
+                # model.load_weights('./data/' + dataset + '_data/model/' + model_name + '.h5')
+
+                model.compile(
+                    loss='categorical_crossentropy',
+                    # optimizer='adadelta',
+                    optimizer='adam',
+                    metrics=['accuracy']
+                )
+
+                model.summary()
 
 
-    from keras.models import load_model
-    model = load_model('../data/' + dataset + '_data/model/' + model_name + '.h5')
+                # Evaluate the benign trained model on clean test set
+                labels_true = np.argmax(y_test, axis=1)
+                labels_test = np.argmax(model.predict(x_test), axis=1)
+                print('Accuracy test set: %.2f%%' % (np.sum(labels_test == labels_true) / x_test.shape[0] * 100))
 
-    # ## for svhn model
-    # from util import get_model
-    # model = get_model(dataset, True)
-    # model.load_weights('./data/' + dataset + '_data/model/' + model_name + '.h5')
+                # # training for MNIST
+                # classifier = KerasClassifier(clip_values=(-0.5, 0.5), model=model, use_logits=False)
+                # attack = ProjectedGradientDescent(classifier, eps=0.3, eps_step=0.01, max_iter=20, batch_size=128)
 
-    model.compile(
-        loss='categorical_crossentropy',
-        # optimizer='adadelta',
-        optimizer='adam',
-        metrics=['accuracy']
-    )
+                # ## training for CIFAR
+                # classifier = KerasClassifier(model=model, use_logits=False)
+                # attack = ProjectedGradientDescent(classifier, eps=8/255, eps_step=2/255, max_iter=10, batch_size=512)
 
-    model.summary()
-    # Evaluate the benign trained model on clean test set
-    labels_true = np.argmax(y_test, axis=1)
-    labels_test = np.argmax(model.predict(x_test), axis=1)
-    print('Accuracy test set: %.2f%%' % (np.sum(labels_test == labels_true) / x_test.shape[0] * 100))
+                ## training for SVHN
+                classifier = KerasClassifier(clip_values=(-0.5, 0.5), model=model, use_logits=False)
+                # attack = ProjectedGradientDescent(classifier, eps=8/255, eps_step=1/255, max_iter=20, batch_size=512)
+                attack = FastGradientMethod(classifier, eps=8/255, batch_size=512)
 
-    # # training for MNIST
-    # classifier = KerasClassifier(clip_values=(-0.5, 0.5), model=model, use_logits=False)
-    # attack = ProjectedGradientDescent(classifier, eps=0.3, eps_step=0.01, max_iter=20, batch_size=128)
+                x_test_pgd = attack.generate(x_test, y_test)
+                # np.save('./data/' + dataset + '_data/model/' + model_name + '_y_' + attack_name + '.npy', x_test_pgd)
 
-    # ## training for CIFAR
-    # classifier = KerasClassifier(model=model, use_logits=False)
-    # attack = ProjectedGradientDescent(classifier, eps=8/255, eps_step=2/255, max_iter=10, batch_size=512)
+                # Evaluate the benign trained model on adv test set
+                labels_pgd = np.argmax(classifier.predict(x_test_pgd), axis=1)
+                print('Accuracy on original PGD adversarial samples: %.2f%%' %
+                    (np.sum(labels_pgd == labels_true) / x_test.shape[0] * 100))
 
-    ## training for SVHN
-    classifier = KerasClassifier(clip_values=(-0.5, 0.5), model=model, use_logits=False)
-    # attack = ProjectedGradientDescent(classifier, eps=8/255, eps_step=1/255, max_iter=20, batch_size=512)
-    attack = FastGradientMethod(classifier, eps=8/255, batch_size=512)
+                trainer = AdversarialTrainer(classifier, attack, ratio=1.0)
+                trainer.fit(x_train, y_train, nb_epochs=60, batch_size=1024)
 
-    x_test_pgd = attack.generate(x_test, y_test)
-    # np.save('./data/' + dataset + '_data/model/' + model_name + '_y_' + attack_name + '.npy', x_test_pgd)
+                classifier.save(filename='adv_' + model_name + '.h5', path='../data/' + dataset + '_data/model/')
 
-    # Evaluate the benign trained model on adv test set
-    labels_pgd = np.argmax(classifier.predict(x_test_pgd), axis=1)
-    print('Accuracy on original PGD adversarial samples: %.2f%%' %
-          (np.sum(labels_pgd == labels_true) / x_test.shape[0] * 100))
+                # Evaluate the adversarially trained model on clean test set
+                labels_true = np.argmax(y_test, axis=1)
+                labels_test = np.argmax(classifier.predict(x_test), axis=1)
+                print('Accuracy test set: %.2f%%' % (np.sum(labels_test == labels_true) / x_test.shape[0] * 100))
 
-    trainer = AdversarialTrainer(classifier, attack, ratio=1.0)
-    trainer.fit(x_train, y_train, nb_epochs=60, batch_size=1024)
+                # Evaluate the adversarially trained model on original adversarial samples
+                labels_pgd = np.argmax(classifier.predict(x_test_pgd), axis=1)
+                print('Accuracy on original PGD adversarial samples: %.2f%%' %
+                    (np.sum(labels_pgd == labels_true) / x_test.shape[0] * 100))
 
-    classifier.save(filename='adv_' + model_name + '.h5', path='../data/' + dataset + '_data/model/')
-
-    # Evaluate the adversarially trained model on clean test set
-    labels_true = np.argmax(y_test, axis=1)
-    labels_test = np.argmax(classifier.predict(x_test), axis=1)
-    print('Accuracy test set: %.2f%%' % (np.sum(labels_test == labels_true) / x_test.shape[0] * 100))
-
-    # Evaluate the adversarially trained model on original adversarial samples
-    labels_pgd = np.argmax(classifier.predict(x_test_pgd), axis=1)
-    print('Accuracy on original PGD adversarial samples: %.2f%%' %
-          (np.sum(labels_pgd == labels_true) / x_test.shape[0] * 100))
-
-    # Evaluate the adversarially trained model on fresh adversarial samples produced on the adversarially trained model
-    x_test_pgd = attack.generate(x_test, y_test)
-    labels_pgd = np.argmax(classifier.predict(x_test_pgd), axis=1)
-    print('Accuracy on new PGD adversarial samples: %.2f%%' % (np.sum(labels_pgd == labels_true) / x_test.shape[0] * 100))
+                # Evaluate the adversarially trained model on fresh adversarial samples produced on the adversarially trained model
+                x_test_pgd = attack.generate(x_test, y_test)
+                labels_pgd = np.argmax(classifier.predict(x_test_pgd), axis=1)
+                print('Accuracy on new PGD adversarial samples: %.2f%%' % (np.sum(labels_pgd == labels_true) / x_test.shape[0] * 100))
 
 
 
