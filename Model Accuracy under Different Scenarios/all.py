@@ -97,6 +97,7 @@ if __name__ == '__main__':
     ### pgd dataset
     x_adv_pgd = np.load('./data/' + dataset + '_data/model/' + model_name + '_' + attack + '.npy')
 
+    ### To-Do: load other attacks.
 
 
     # ## load benign model
@@ -117,27 +118,33 @@ if __name__ == '__main__':
 
 
     ##############################Q1########################
+    # 初始模型，在初始数据集上的准确率
     criteria1_1 = AttackEvaluate(model_benign, x_test, y_test, x_test)
     MR1_1 = 1 - criteria1_1.misclassification_rate()
 
+    # deephunter的模型，在初始数据集上的准确率
     criteria1_2 = AttackEvaluate(model_dp, x_test, y_test, x_test)
     MR1_2 = 1 - criteria1_2.misclassification_rate()
 
 
     ##############################Q2#########################
+    # 初始模型，在deephunter上的准确率
     criteria2_1 = AttackEvaluate(model_benign, x_test, y_test, x_adv_dp)
     MR2_1 = 1 - criteria2_1.misclassification_rate()
 
+    # deephunter模型，在deephunter上的准确率
     criteria2_2 = AttackEvaluate(model_dp, x_test, y_test, x_adv_dp)
     MR2_2 = 1 - criteria2_2.misclassification_rate()
 
 
     #############################Q3##########################
+    # deephunter模型，在pgd上的准确率
     criteria3 = AttackEvaluate(model_dp, x_test, y_test, x_adv_pgd)
     MR3 = 1 - criteria3.misclassification_rate()
 
 
     #############################Q4##########################
+    # pgd模型，在deephunter上的准确率
     criteria4 = AttackEvaluate(model_pgd, x_test, y_test, x_adv_dp)
     MR4 = 1 - criteria4.misclassification_rate()
 
@@ -149,9 +156,20 @@ if __name__ == '__main__':
     with open("result.txt", "a") as f:
         f.write("\n------------------------------------------------------------------------------\n")
         f.write('the result of {} {} is: \n'.format(args.dataset, args.model))
+        # deephunter模型，在初始数据集上的准确率是 MR1_2,
+        # MR1_2 - MR1_1 表示 经过deephunter的修复后，比起初始模型有什么提升
         f.write('Benign-dh is {} and ({})\n'.format(MR1_2, MR1_2-MR1_1))
+
+        # deephunter模型，在DeepHunter attack上的准确率是 M2_2
+        # MR2_2 - MR2_1 表示，经过deephunter的修复后，比起初始模型有什么提升 
         f.write('DH-dh is {} and ({})\n'.format(MR2_2, MR2_2-MR2_1))
+
+        # deephunter模型，在PGD Attack上的效果
+        # 这里只记录了一个值，应该是初始模型在PGD attack上的效果为0
         f.write('PGD-dh is {} \n'.format(MR3))
+
+        # pgd模型，在DeepHunter Attack上的准确率是M4
+        # MR4 - MR2_1 表示，经过pgd修复后，比起初始模型有什么提升
         f.write('DH-pgd is {} and ({})\n'.format(MR4, MR4-MR2_1))
 
 
