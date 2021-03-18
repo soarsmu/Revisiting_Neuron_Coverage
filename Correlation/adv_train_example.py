@@ -1,5 +1,5 @@
 from util import get_data, get_model
-
+from tensorflow.python.client import device_lib
 from keras.preprocessing.image import ImageDataGenerator
 from art.data_generators import KerasDataGenerator
 
@@ -33,15 +33,23 @@ def load_data(name):
 
 
 if __name__ == "__main__":
+    datasets = ['svhn', 'mnist', 'cifar']
+    model_dict = {
+                'mnist': ['lenet1', 'lenet4', 'lenet5'],
+                'cifar': ['vgg16', 'resnet20'],
+                'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
+                }
+
+    # Check path
+    for dataset in model_dict.keys():
+        for model_name in model_dict[dataset]:
+            assert os.path.exists('../data/' + dataset + '_data/model/' + model_name + '.h5')
+
     dataset = 'svhn'
     model_name = 'svhn_second'
-    attack_name = 'PGD'
+    attack_name = 'FGSM'
 
-    # dataset = 'cifar'
-    # model_name = 'resnet20'
-    # attack_name = 'PGD'
 
-    # x_train, y_train, x_test, y_test = get_data('cifar')
     x_train, y_train, x_test, y_test = load_data(dataset)
 
 
@@ -76,7 +84,8 @@ if __name__ == "__main__":
 
     ## training for SVHN
     classifier = KerasClassifier(clip_values=(-0.5, 0.5), model=model, use_logits=False)
-    attack = ProjectedGradientDescent(classifier, eps=8/255, eps_step=1/255, max_iter=20, batch_size=512)
+    # attack = ProjectedGradientDescent(classifier, eps=8/255, eps_step=1/255, max_iter=20, batch_size=512)
+    attack = FastGradientMethod(classifier, eps=8/255, batch_size=512)
 
     x_test_pgd = attack.generate(x_test, y_test)
     # np.save('./data/' + dataset + '_data/model/' + model_name + '_y_' + attack_name + '.npy', x_test_pgd)
