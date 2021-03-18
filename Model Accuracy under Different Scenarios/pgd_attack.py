@@ -265,27 +265,35 @@ def accuracy(model, x, labels):
 if __name__ == '__main__':
     dataset = 'mnist'
     model_name = 'lenet1'
+
+
+    datasets = ['svhn', 'mnist', 'cifar']
+    model_dict = {
+                'mnist': ['lenet1', 'lenet4', 'lenet5'],
+                'cifar': ['vgg16', 'resnet20'],
+                'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
+                }
     attack = 'PGD'
+    for dataset in datasets:
+        for model_name in model_dict[dataset]:
+            x_train, y_train, x_test, y_test = load_data(dataset)
 
-    # ## get MNIST or SVHN
-    x_train, y_train, x_test, y_test = load_data(dataset)
 
+            # ## load deephunter model
+            from keras.models import load_model
+            model = load_model('new_model/dp_{}.h5'.format(model_name))
+            model.summary()
 
-    # ## load deephunter model
-    from keras.models import load_model
-    model = load_model('new_model/dp_{}.h5'.format(model_name))
-    model.summary()
+            accuracy(model, x_test, y_test)
 
-    accuracy(model, x_test, y_test)
+            adv = gen_adv_data(model, x_test, y_test, attack, dataset, 256)
 
-    adv = gen_adv_data(model, x_test, y_test, attack, dataset, 256)
+            # accuracy(model, adv, y_test)
+            # np.save('./data/cifar_data/model/test_adv_PGD', adv)
+            np.save('./data/' + dataset + '_data/model/' + model_name + '_' + attack + '.npy', adv)
 
-    # accuracy(model, adv, y_test)
-    # np.save('./data/cifar_data/model/test_adv_PGD', adv)
-    np.save('./data/' + dataset + '_data/model/' + model_name + '_' + attack + '.npy', adv)
-
-    # y_res = model.predict(x_train)
-    # y_res = softmax(y_res)
-    # y_res = y_res.argmax(axis=-1)
-    # y = y_train.argmax(axis=-1)
-    # idx = (y_res == y)
+            # y_res = model.predict(x_train)
+            # y_res = softmax(y_res)
+            # y_res = y_res.argmax(axis=-1)
+            # y = y_train.argmax(axis=-1)
+            # idx = (y_res == y)

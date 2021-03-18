@@ -367,35 +367,33 @@ if __name__ == '__main__':
 
     dataset = 'mnist'
     model_name = 'lenet1'
-    # l = [0, 8]
 
-    x_train, y_train, x_test, y_test = load_data(dataset)
-    # x_test_new = np.load('x_test_new.npy')
-
-    # ## load mine trained model
+    datasets = ['mnist', 'cifar', 'svhn']
+    model_dict = {
+                'mnist': ['lenet1', 'lenet4', 'lenet5'],
+                'cifar': ['vgg16', 'resnet20'],
+                'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
+                }
+    
     from keras.models import load_model
-
-    model = load_model('./data/' + dataset + '_data/model/' + model_name + '.h5')
-    model.summary()
-
-    index = np.load('fuzzing/nc_index_{}.npy'.format(4), allow_pickle=True).item()
-    for y, x in index.items():
-        x_train = np.concatenate((x_train, np.expand_dims(x, axis=0)), axis=0)
-        y_train = np.concatenate((y_train, np.expand_dims(y_train[y], axis=0)), axis=0)
-
-    # index = np.load('fuzzing/nc_index_{}.npy'.format(2), allow_pickle=True).item()
-    # for y, x in index.items():
-    #     x_train = np.concatenate((x_train, np.expand_dims(x, axis=0)), axis=0)
-    #     y_train = np.concatenate((y_train, np.expand_dims(y_train[y], axis=0)), axis=0)
-    #
-    # index = np.load('fuzzing/nc_index_{}.npy'.format(3), allow_pickle=True).item()
-    # for y, x in index.items():
-    #     x_train = np.concatenate((x_train, np.expand_dims(x, axis=0)), axis=0)
-    #     y_train = np.concatenate((y_train, np.expand_dims(y_train[y], axis=0)), axis=0)
+    for dataset in datasets:
+        for model_name in model_dict[dataset]:
+            x_train, y_train, x_test, y_test = load_data(dataset)
 
 
-    retrained_model = retrain(model, x_train, y_train, x_test, y_test, batch_size=256, epochs=60)
-    retrained_model.save('new_model/dp_{}.h5'.format(model_name))
+            # ## load mine trained model
+
+
+            model = load_model('./data/' + dataset + '_data/model/' + model_name + '.h5')
+            model.summary()
+
+            index = np.load('fuzzing/' + dataset + '_' + model_name +  '/nc_index_{}.npy'.format(4), allow_pickle=True).item()
+            for y, x in index.items():
+                x_train = np.concatenate((x_train, np.expand_dims(x, axis=0)), axis=0)
+                y_train = np.concatenate((y_train, np.expand_dims(y_train[y], axis=0)), axis=0)
+
+            retrained_model = retrain(model, x_train, y_train, x_test, y_test, batch_size=256, epochs=60)
+            retrained_model.save('new_model/dp_{}.h5'.format(model_name))
 
 
 

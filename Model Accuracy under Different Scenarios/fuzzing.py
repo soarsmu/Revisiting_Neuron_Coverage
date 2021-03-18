@@ -316,42 +316,54 @@ def compare_nc(x_new, x_old, layer):
 
 
 if __name__ == '__main__':
-    dataset = 'mnist'
-    model_name = 'lenet1'
-    model_layer = 8
+    # dataset = 'mnist'
+    # model_name = 'lenet1'
+    # model_layer = 8
 
-    # load dataset
-    x_train, y_train, x_test, y_test = load_data(dataset)
+    datasets = ['mnist', 'cifar', 'svhn']
+    model_dict = {
+                'mnist': ['lenet1', 'lenet4', 'lenet5'],
+                'cifar': ['vgg16', 'resnet20'],
+                'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
+                }
 
-    # import model
+
     from keras.models import load_model
-    model = load_model('./data/' + dataset + '_data/model/' + model_name + '.h5')
-    model.summary()
 
-    # print(x_test[:1].shape)
-    #
-    # print(softmax(model.predict(np.expand_dims(x_test[0], axis=0))).argmax(axis=-1))
-    # print(y_test[0])
+    for dataset in datasets:
+        for model_name in model_dict[dataset]:
+            # load original model
+            model = load_model('./data/' + dataset + '_data/model/' + model_name + '.h5')
+            # get model layer
+            model_layer = len(model.layers) - 1
 
-    for order_number in range(4, 5):
-        nc_index = {}
-        nc_number = 0
-        for i in range(3000*order_number, 3000*(order_number+1)):
-            new_image = mutate(x_train[i], dataset)
+            # load dataset
+            x_train, y_train, x_test, y_test = load_data(dataset)
 
-            if i == 5000*order_number+1000 or i == 5000*order_number+3000:
-                print("-------------------------------------THIS IS {}-------------------------------------".format(i))
-            # print(softmax(model.predict(np.expand_dims(new_image, axis=0))))
-            if softmax(model.predict(np.expand_dims(new_image, axis=0))).argmax(axis=-1) != softmax(model.predict(np.expand_dims(x_train[i], axis=0))).argmax(axis=-1):
 
-                nc_symbol = compare_nc(new_image, x_train[i], model_layer)
+            for order_number in range(4, 5):
+                nc_index = {}
+                nc_number = 0
+                for i in range(3000*order_number, 3000*(order_number+1)):
+                    new_image = mutate(x_train[i], dataset)
 
-                if nc_symbol == True:
-                    nc_index[i] = new_image
-                    nc_number += 1
+                    if i == 5000*order_number+1000 or i == 5000*order_number+3000:
+                        print("-------------------------------------THIS IS {}-------------------------------------".format(i))
+                    if softmax(model.predict(np.expand_dims(new_image, axis=0))).argmax(axis=-1) != softmax(model.predict(np.expand_dims(x_train[i], axis=0))).argmax(axis=-1):
 
-        print(nc_number)
-        np.save('fuzzing/nc_index_{}.npy'.format(order_number), nc_index)
+                        nc_symbol = compare_nc(new_image, x_train[i], model_layer)
+
+                        if nc_symbol == True:
+                            nc_index[i] = new_image
+                            nc_number += 1
+
+                print(nc_number)
+                
+                ### save data
+                folder_to_store = 'fuzzing/' + dataset + '_' + model_name
+                if not os.path.exists(folder_to_store):
+                    os.mkdir(folder_to_store)
+                np.save('fuzzing/' + dataset + '_' + model_name +  '/nc_index_{}.npy'.format(order_number), nc_index)
 
 
 
