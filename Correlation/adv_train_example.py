@@ -32,6 +32,13 @@ def load_data(name):
     return x_train, y_train, x_test, y_test
 
 
+def check_data_path(name):
+    assert os.path.exists('../data/' + name + '_data/' + name + '_x_train.npy')
+    assert os.path.exists('../data/' + name + '_data/' + name + '_y_train.npy')
+    assert os.path.exists('../data/' + name + '_data/' + name + '_x_test.npy')
+    assert os.path.exists('../data/' + name + '_data/' + name + '_y_test.npy')
+
+
 if __name__ == "__main__":
     datasets = ['svhn', 'mnist', 'cifar']
     model_dict = {
@@ -42,11 +49,13 @@ if __name__ == "__main__":
 
     # Check path
     for dataset in model_dict.keys():
+        # verify data path
+        check_data_path(dataset)
+        # verify model path
         for model_name in model_dict[dataset]:
             assert os.path.exists('../data/' + dataset + '_data/model/' + model_name + '.h5')
 
-    dataset = 'svhn'
-    model_name = 'svhn_second'
+
     attack_name = 'FGSM'
 
 
