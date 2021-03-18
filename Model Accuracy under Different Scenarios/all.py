@@ -96,98 +96,115 @@ if __name__ == '__main__':
                 'svhn' : ['svhn_model']
                 }
 
-    attack_names = ['PGD']
+    defense_names = ['Benign', 'DeepHunter', 'PGD']
+    attack_names = ['Benign', 'DeepHunter', 'PGD']
+
+
     for dataset in datasets:
         for model_name in model_dict[dataset]:
+            '''Load dataset'''
+            x_adv_attacks = {}
             for attack in attack_names:
-                '''Load dataset'''
-                ### benign dataset
-                x_train, y_train, x_test, y_test = load_data(dataset)
+                # To-Do: to be modified after we generate using new paths.
+                if attack == 'Benign':
+                    ### benign dataset
+                    x_train, y_train, x_test, y_test = load_data(dataset)
+                    x_adv_attacks[attack] = x_test
+                elif attack == 'DeepHunter':
+                    ### deephunter dataset
+                    x_adv_attacks[attack] = np.load('./data/' + dataset + '_data/model/' + 'deephunter_adv_test_{}.npy'.format(model_name))
+                else:
+                    ### optimization-based attacks
+                    x_adv_attacks[attack] = np.load('./data/' + dataset + '_data/model/' + model_name + '_' + attack + '.npy')
 
-                ### deephunter dataset
-                x_adv_dp = np.load('./data/' + dataset + '_data/model/' + 'deephunter_adv_test_{}.npy'.format(model_name))
+            '''Load models for denfense'''
+            from keras.models import load_model
 
-                ### pgd dataset
-                x_adv_pgd = np.load('./data/' + dataset + '_data/model/' + model_name + '_' + attack + '.npy')
-
-                ### To-Do: load other attacks.
-
-
-                # ## load benign model
-                from keras.models import load_model
-
-                model_benign = load_model('./data/' + dataset + '_data/model/' + model_name + '.h5')
-                model_benign.summary()
-
-                # ## load deephunter model
-                from keras.models import load_model
-
-                model_dp = load_model('new_model/dp_{}.h5'.format(model_name))
-                model_dp.summary()
-
-                ##### load pgd trained model
-                model_pgd = load_model('./data/' + dataset + '_data/model/adv_' + model_name + '.h5')
-                model_pgd.summary()
-
-
-                ##############################Q1########################
-                # 初始模型，在初始数据集上的准确率
-                criteria1_1 = AttackEvaluate(model_benign, x_test, y_test, x_test)
-                MR1_1 = 1 - criteria1_1.misclassification_rate()
-
-                # deephunter的模型，在初始数据集上的准确率
-                criteria1_2 = AttackEvaluate(model_dp, x_test, y_test, x_test)
-                MR1_2 = 1 - criteria1_2.misclassification_rate()
+            model_defenses = {}
+            for defense in defense_names:
+                # To-Do: to be modified after we generate using new paths.    
+                if defense == 'Benign':
+                    ### load benign model
+                    model_defenses[defense] = load_model('./data/' + dataset + '_data/model/' + model_name + '.h5')
+                elif defense == 'DeepHunter':
+                    ### load deephunter model
+                    model_defenses[defense] = load_model('new_model/dp_{}.h5'.format(model_name))
+                else:
+                    #### load models trained with optimization-based attack
+                    model_defenses[attack] = load_model('./data/' + dataset + '_data/model/adv_' + model_name + '.h5')
 
 
-                ##############################Q2#########################
-                # 初始模型，在deephunter上的准确率
-                criteria2_1 = AttackEvaluate(model_benign, x_test, y_test, x_adv_dp)
-                MR2_1 = 1 - criteria2_1.misclassification_rate()
+            table = pt.PrettyTable()
+            table.field_names = ["Dataset", "Model"] + attack_names
 
-                # deephunter模型，在deephunter上的准确率
-                criteria2_2 = AttackEvaluate(model_dp, x_test, y_test, x_adv_dp)
-                MR2_2 = 1 - criteria2_2.misclassification_rate()
+            '''Computing accuracy'''
+            for defense in defense_names:
+                row_content = [dataset, defense]
+                for attack in attack_names:
+                    criteria = AttackEvaluate(model_defenses[defense], x_test, y_test, x_adv_attacks[attack])
+                    accuracy = 1 - criteria.misclassification_rate()
+                    row_content.append(str(round(accuracy,4)*100))
+                table.add_row(row_content)
+            print(table)
+            exit()
 
+            ##############################Q1########################
+            # 初始模型，在初始数据集上的准确率
+            criteria1_1 = AttackEvaluate(model_benign, x_test, y_test, x_test)
+            MR1_1 = 1 - criteria1_1.misclassification_rate()
 
-                #############################Q3##########################
-                # deephunter模型，在pgd上的准确率
-                criteria3 = AttackEvaluate(model_dp, x_test, y_test, x_adv_pgd)
-                MR3 = 1 - criteria3.misclassification_rate()
-
-
-                #############################Q4##########################
-                # pgd模型，在deephunter上的准确率
-                criteria4 = AttackEvaluate(model_pgd, x_test, y_test, x_adv_dp)
-                MR4 = 1 - criteria4.misclassification_rate()
-
-                print(MR1_1, MR1_2)
-                print(MR2_1, MR2_2)
-                print(MR3)
-                print(MR4)
-
-                table = pt.PrettyTable()
-                table.field_names = ["Dataset", "Model", "Bengin", "DeepHunter", "PGD"]
+            # deephunter的模型，在初始数据集上的准确率
+            criteria1_2 = AttackEvaluate(model_dp, x_test, y_test, x_test)
+            MR1_2 = 1 - criteria1_2.misclassification_rate()
 
 
-                with open("result.txt", "a") as f:
-                    f.write("\n------------------------------------------------------------------------------\n")
-                    f.write('the result of {} {} is: \n'.format(args.dataset, args.model))
-                    # deephunter模型，在初始数据集上的准确率是 MR1_2,
-                    # MR1_2 - MR1_1 表示 经过deephunter的修复后，比起初始模型有什么提升
-                    f.write('Benign-dh is {} and ({})\n'.format(MR1_2, MR1_2-MR1_1))
+            ##############################Q2#########################
+            # 初始模型，在deephunter上的准确率
+            criteria2_1 = AttackEvaluate(model_benign, x_test, y_test, x_adv_dp)
+            MR2_1 = 1 - criteria2_1.misclassification_rate()
 
-                    # deephunter模型，在DeepHunter attack上的准确率是 M2_2
-                    # MR2_2 - MR2_1 表示，经过deephunter的修复后，比起初始模型有什么提升 
-                    f.write('DH-dh is {} and ({})\n'.format(MR2_2, MR2_2-MR2_1))
+            # deephunter模型，在deephunter上的准确率
+            criteria2_2 = AttackEvaluate(model_dp, x_test, y_test, x_adv_dp)
+            MR2_2 = 1 - criteria2_2.misclassification_rate()
 
-                    # deephunter模型，在PGD Attack上的效果
-                    # 这里只记录了一个值，应该是初始模型在PGD attack上的效果为0
-                    f.write('PGD-dh is {} \n'.format(MR3))
 
-                    # pgd模型，在DeepHunter Attack上的准确率是M4
-                    # MR4 - MR2_1 表示，经过pgd修复后，比起初始模型有什么提升
-                    f.write('DH-pgd is {} and ({})\n'.format(MR4, MR4-MR2_1))
+            #############################Q3##########################
+            # deephunter模型，在pgd上的准确率
+            criteria3 = AttackEvaluate(model_dp, x_test, y_test, x_adv_pgd)
+            MR3 = 1 - criteria3.misclassification_rate()
+
+
+            #############################Q4##########################
+            # pgd模型，在deephunter上的准确率
+            criteria4 = AttackEvaluate(model_pgd, x_test, y_test, x_adv_dp)
+            MR4 = 1 - criteria4.misclassification_rate()
+
+            print(MR1_1, MR1_2)
+            print(MR2_1, MR2_2)
+            print(MR3)
+            print(MR4)
+
+
+
+
+            with open("result.txt", "a") as f:
+                f.write("\n------------------------------------------------------------------------------\n")
+                f.write('the result of {} {} is: \n'.format(args.dataset, args.model))
+                # deephunter模型，在初始数据集上的准确率是 MR1_2,
+                # MR1_2 - MR1_1 表示 经过deephunter的修复后，比起初始模型有什么提升
+                f.write('Benign-dh is {} and ({})\n'.format(MR1_2, MR1_2-MR1_1))
+
+                # deephunter模型，在DeepHunter attack上的准确率是 M2_2
+                # MR2_2 - MR2_1 表示，经过deephunter的修复后，比起初始模型有什么提升 
+                f.write('DH-dh is {} and ({})\n'.format(MR2_2, MR2_2-MR2_1))
+
+                # deephunter模型，在PGD Attack上的效果
+                # 这里只记录了一个值，应该是初始模型在PGD attack上的效果为0
+                f.write('PGD-dh is {} \n'.format(MR3))
+
+                # pgd模型，在DeepHunter Attack上的准确率是M4
+                # MR4 - MR2_1 表示，经过pgd修复后，比起初始模型有什么提升
+                f.write('DH-pgd is {} and ({})\n'.format(MR4, MR4-MR2_1))
 
 
 
