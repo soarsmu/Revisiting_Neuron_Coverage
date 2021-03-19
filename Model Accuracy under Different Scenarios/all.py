@@ -89,15 +89,19 @@ if __name__ == '__main__':
     # model_name = args.model
     # attack = 'PGD'
 
-    datasets = ['svhn']
+    datasets = ['mnist', 'cifar', 'svhn']
     model_dict = {
                 'mnist': ['lenet1', 'lenet4', 'lenet5'],
-                'cifar': ['vgg16', 'resnet20'],
-                'svhn' : ['svhn_model']
+                'cifar': ['vgg16'], # , 'resnet20'
+                'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
                 }
 
     defense_names = ['Benign', 'DeepHunter', 'PGD']
     attack_names = ['Benign', 'DeepHunter', 'PGD']
+
+    table = pt.PrettyTable()
+    table.field_names = ["Dataset", "Model"] + attack_names
+    table.align["Dataset", "Model"] = 'l'
 
 
     for dataset in datasets:
@@ -134,19 +138,20 @@ if __name__ == '__main__':
                     model_defenses[attack] = load_model('./data/' + dataset + '_data/model/adv_' + model_name + '.h5')
 
 
-            table = pt.PrettyTable()
-            table.field_names = ["Dataset", "Model"] + attack_names
+
 
             '''Computing accuracy'''
             for defense in defense_names:
-                row_content = [dataset, defense]
+                if defense == 'Benign':
+                    continue # don't show data for original model
+                row_content = [dataset, model_name + '_' + defense]
                 for attack in attack_names:
                     criteria = AttackEvaluate(model_defenses[defense], x_test, y_test, x_adv_attacks[attack])
                     accuracy = 1 - criteria.misclassification_rate()
-                    row_content.append(str(round(accuracy,4)*100))
+                    row_content.append(str(round(accuracy * 100,2)))
                 table.add_row(row_content)
             print(table)
-            exit()
+            continue
 
             ##############################Q1########################
             # 初始模型，在初始数据集上的准确率
