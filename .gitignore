@@ -5,3 +5,8 @@ data/*
 Model Accuracy under Different Scenarios/data/*
 Model Accuracy under Different Scenarios/new_model/*
 Model Accuracy under Different Scenarios/fuzzing/*
+
+*.pyc
+
+data/
+models/
