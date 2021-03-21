@@ -3,6 +3,16 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import argparse
+import sys
+from util import get_model
+import time
+import numpy as np
+from keras import backend as K
+import keras
+## load mine trained model
+from keras.models import load_model
+
 from cleverhans.utils_keras import KerasModelWrapper
 from cleverhans.attacks import CarliniWagnerL2
 from cleverhans.attacks import SaliencyMapMethod
@@ -10,22 +20,18 @@ from cleverhans.attacks import FastGradientMethod
 from cleverhans.attacks import BasicIterativeMethod
 from cleverhans.attacks import ProjectedGradientDescent
 
+
 import tensorflow as tf
 import os
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+DATA_DIR = "../data/"
+MODEL_DIR = "../models/"
 
 ####for solving some specific problems, don't care
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
-
-import keras
-from keras import backend as K
-import numpy as np
-import time
-import sys
-import argparse
 
 
 # def JSMA(model, x, y):
@@ -116,103 +122,110 @@ import argparse
 #     adv = pgd.generate_np(x, **pgd_params)
 #     return adv
 
+attack_params = {}
+attack_params['CW'] = {}
+for dataset_name in ['mnist', 'cifar', 'svhn'] :
+    attack_params['CW'][dataset_name] = {'binary_search_steps': 1,
+                                         'learning_rate': .1,
+                                         'max_iterations': 50,
+                                         'initial_const': 10
+                                         # 'clip_min': -0.5,
+                                         # 'clip_max': 0.5
+                                         }
+
+attack_params['PGD'] = {}
+attack_params['PGD']['cifar'] = {'eps': 16. / 255.,
+                      'eps_iter': 2. / 255.,
+                      'nb_iter': 30.
+                      # 'clip_min': -0.5,
+                      # 'clip_max': 0.5
+                      }
+
+attack_params['PGD']['mnist'] = {'eps': .3,
+                      'eps_iter': .03,
+                      'nb_iter': 20.,
+                      'clip_min': -0.5,
+                      'clip_max': 0.5
+                      }
+            
+attack_params['PGD']['svhn'] = {'eps': 8. / 255.,
+                      'eps_iter': 0.01,
+                      'nb_iter': 30.,
+                      'clip_min': -0.5,
+                      'clip_max': 0.5
+                      }
+
+attack_params['FGSM'] = {}
+attack_params['FGSM']['cifar'] = {'eps': 16. / 255.,
+                                 # 'clip_min': -0.5,
+                                 # 'clip_max': 0.5
+                                 }
+
+attack_params['FGSM']['mnist'] = {'eps': .3,
+                                 'clip_min': -0.5,
+                                 'clip_max': 0.5
+                                 }
+
+attack_params['FGSM']['svhn'] = {'eps': 8. / 255.,
+                                'clip_min': -0.5,
+                                'clip_max': 0.5
+                                }
+
+attack_params['BIM'] = {}
+for dataset_name in ['mnist', 'cifar', 'svhn']:
+    attack_params['BIM'][dataset_name] = {
+        'eps_iter': 0.03, 'nb_iter': 10, 'clip_min': 0., 'clip_max': 1.}
 
 # integrate all attack method in one function and only construct graph once
-def gen_adv_data(model, x, y, method, dataset, batch=2048):
+def gen_adv_data(model, x, y, attack_name, dataset_name, batch_size=2048):
     sess = K.get_session()
     model_wrap = KerasModelWrapper(model)
-    if method.upper() == 'CW':
-        params = {'binary_search_steps': 1,
-                  'y': y,
-                  'learning_rate': .1,
-                  'max_iterations': 50,
-                  'initial_const': 10,
-                  'batch_size': batch,
-                  # 'clip_min': -0.5,
-                  # 'clip_max': 0.5
-                  }
+    params = attack_params[attack_name][dataset_name]
+    if attack_name == 'CW':
         attack = CarliniWagnerL2(model_wrap, sess=sess)
-
-        data_num = x.shape[0]
-        begin, end = 0, batch
-        adv_x_all = np.zeros_like(x)
-        # every time process batch_size
-        while end < data_num:
-            start_time = time.time()
-            params['y'] = y[begin:end]
-            adv_x = attack.generate_np(x[begin:end], **params)
-            adv_x_all[begin: end] = adv_x
-            print(begin, end, "done")
-            begin += batch
-            end += batch
-            end_time = time.time()
-            print("time: ", end_time - start_time)
-
-        # process the remaining
-        if begin < data_num:
-            start_time = time.time()
-            params['y'] = y[begin:]
-            params['batch_size'] = data_num - begin
-            adv_x = attack.generate_np(x[begin:], **params)
-            adv_x_all[begin:] = adv_x
-            print(begin, data_num, "done")
-            end_time = time.time()
-            print("time: ", end_time - start_time)
-
-    elif method.upper() == 'PGD':
-        if dataset == 'cifar':
-            params = {'eps': 8. / 255.,
-                      'eps_iter': 2. / 255.,
-                      'nb_iter': 300.,
-                      # 'clip_min': -0.5,
-                      # 'clip_max': 0.5,
-                      'y': y}
-            attack = ProjectedGradientDescent(model_wrap, sess=sess)
-        elif dataset == 'mnist':
-            params = {'eps': .3,
-                      'eps_iter': .03,
-                      'nb_iter': 500.,
-                      'clip_min': -0.5,
-                      'clip_max': 0.5,
-                      'y': y}
-            attack = ProjectedGradientDescent(model_wrap, sess=sess)
-        elif dataset == 'svhn':
-            params = {'eps': 8. / 255.,
-                      'eps_iter': 0.01,
-                      'nb_iter': 500.,
-                      'clip_min': -0.5,
-                      'clip_max': 0.5,
-                      'y': y}
-            attack = ProjectedGradientDescent(model_wrap, sess=sess)
-
-        data_num = x.shape[0]
-        begin, end = 0, batch
-        adv_x_all = np.zeros_like(x)
-        # every time process batch_size
-        while end < data_num:
-            start_time = time.time()
-            params['y'] = y[begin:end]
-            adv_x = attack.generate_np(x[begin:end], **params)
-            adv_x_all[begin: end] = adv_x
-            print(begin, end, "done")
-            begin += batch
-            end += batch
-            end_time = time.time()
-            print("time: ", end_time - start_time)
-
-        # process the remaining
-        if begin < data_num:
-            start_time = time.time()
-            params['y'] = y[begin:]
-            adv_x = attack.generate_np(x[begin:], **params)
-            adv_x_all[begin:] = adv_x
-            print(begin, data_num, "done")
-            end_time = time.time()
-            print("time: ", end_time - start_time)
-
+    elif attack_name == 'PGD':
+        attack = ProjectedGradientDescent(model_wrap, sess=sess)
+    elif attack_name == 'FGSM':
+        attack = FastGradientMethod(model_wrap, sess=sess)
+    elif attack_name == 'BIM':
+        attack = BasicIterativeMethod(model_wrap, sess=sess)
     else:
         print('Unsupported attack')
         sys.exit(1)
+    
+    data_num = x.shape[0]
+    begin, end = 0, batch_size
+    adv_x_all = np.zeros_like(x)
+    # every time process batch_size
+    while end < data_num:
+        start_time = time.time()
+        if attack_name in ["CW"] :
+            adv_x = attack.generate_np(
+                x_val=x[begin:end], y=y[begin:end], batch_size=batch_size, **params)
+        elif attack_name in ["PGD", "FGSM", "BIM"]:
+            adv_x = attack.generate_np(
+                x_val=x[begin:end], y=y[begin:end], **params)
+        adv_x_all[begin: end] = adv_x
+        print(begin, end, "done")
+        begin += batch_size
+        end += batch_size
+        end_time = time.time()
+        print("time: ", end_time - start_time)
+
+    # process the remaining
+    if begin < data_num:
+        start_time = time.time()
+        if attack_name in ["CW"]:
+            curr_batch_size = data_num - begin
+            adv_x = attack.generate_np(
+                x_val=x[begin:], y=y[begin:], batch_size=curr_batch_size, **params)
+        elif attack_name in ["PGD", "FGSM", "BIM"]:
+            adv_x = attack.generate_np(
+                x_val=x[begin:], y=y[begin:], **params)
+        adv_x_all[begin:] = adv_x
+        print(begin, data_num, "done")
+        end_time = time.time()
+        print("time: ", end_time - start_time)
 
     return adv_x_all
 
@@ -236,13 +249,13 @@ def gen_adv_data(model, x, y, method, dataset, batch=2048):
 
 
 # the data is in range(-.5, .5)
-def load_data(name):
-    assert (name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
-    name = name.lower()
-    x_train = np.load('./data/' + name + '_data/' + name + '_x_train.npy')
-    y_train = np.load('./data/' + name + '_data/' + name + '_y_train.npy')
-    x_test = np.load('./data/' + name + '_data/' + name + '_x_test.npy')
-    y_test = np.load('./data/' + name + '_data/' + name + '_y_test.npy')
+def load_data(dataset_name):
+    assert (dataset_name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
+    dataset_name = dataset_name.lower()
+    x_train = np.load(DATA_DIR + dataset_name + '/benign/x_train.npy')
+    y_train = np.load(DATA_DIR + dataset_name + '/benign/y_train.npy')
+    x_test = np.load(DATA_DIR + dataset_name + '/benign/x_test.npy')
+    y_test = np.load(DATA_DIR + dataset_name + '/benign/y_test.npy')
     return x_train, y_train, x_test, y_test
 
 
@@ -263,47 +276,74 @@ def accuracy(model, x, labels):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='attack for DNN')
-    parser.add_argument('-dataset', help="dataset to use", choices=['mnist', 'cifar', 'svhn'])
-    parser.add_argument('-model', help="target model to attack", choices=['vgg16', 'resnet20', 'lenet1', 'lenet4', 'lenet5', 'adv_lenet1', 'adv_lenet4', 'adv_lenet5', 'adv_vgg16', 'adv_resnet20', 'svhn_model', 'adv_svhn_model', 'svhn_first', 'adv_svhn_first', 'svhn_second','adv_svhn_second'])
+    parser.add_argument('-dataset', help="dataset to use",
+                        choices=['mnist', 'cifar', 'svhn'])
+    parser.add_argument('-model', help="target model to attack", choices=['vgg16', 'resnet20', 'lenet1', 'lenet4', 'lenet5', 'adv_lenet1', 'adv_lenet4',
+                                                                          'adv_lenet5', 'adv_vgg16', 'adv_resnet20', 'svhn_model', 'adv_svhn_model', 'svhn_first', 'adv_svhn_first', 'svhn_second', 'adv_svhn_second'])
     parser.add_argument('-attack', help="attack model", choices=['CW', 'PGD'])
-    parser.add_argument('-batch_size', help="attack batch size", type=int, default=32)
+    parser.add_argument(
+        '-batch_size', help="attack batch size", type=int, default=32)
 
     args = parser.parse_args()
     # args.dataset = 'cifar'
     # args.attack = 'PGD'
 
-    # ## get MNIST or SVHN
-    x_train, y_train, x_test, y_test = load_data(args.dataset)
+    dataset_name = "mnist"
+    model_name = "lenet1"
+    attack_name = "PGD"
 
-    ## get CIFAR
-    # from util import get_data
-    # x_train, y_train, x_test, y_test = get_data(args.dataset)
+    datasets = ['mnist', 'cifar', 'svhn']
+    model_dict = {
+        'mnist': ['lenet1', 'lenet4', 'lenet5'],
+        'cifar': ['vgg16', 'resnet20'],
+        'svhn': ['svhn_model', 'svhn_first', 'svhn_second']
+    }
+    
+    # model_dict = {
+    #     'mnist': ['lenet1']
+    # }
 
-    # ## load Xuwei's trained svhn model
-    # model = get_model(args.dataset, True)
-    # model.load_weights('./data/' + args.dataset + '_data/model/' + args.model + '.h5')
-    # model.compile(
-    #     loss='categorical_crossentropy',
-    #     # optimizer='adadelta',
-    #     optimizer='adam',
-    #     metrics=['accuracy']
-    # )
+    # model_dict = {
+    #     'cifar': ['vgg16'],
+    # }
 
-    ## load mine trained model
-    from keras.models import load_model
-    model = load_model('./data/' + args.dataset + '_data/model/' + args.model + '.h5')
-    model.summary()
+    # attack_names = ["PGD", "CW", "FGSM", "BIM"]
+    attack_names = ["PGD", "CW", "FGSM"]
+    # attack_names = ['BIM']
 
-    accuracy(model, x_test, y_test)
+    for dataset_name in datasets:
+        if dataset_name in model_dict:
+            for model_name in model_dict[dataset_name]:
+                for attack_name in attack_names :
+                    # ## get MNIST or SVHN
+                    x_train, y_train, x_test, y_test = load_data(dataset_name)
 
-    adv = gen_adv_data(model, x_test[:1000], y_test[:1000], args.attack, args.dataset, args.batch_size)
+                    ## get CIFAR
+                    # from util import get_data
+                    # x_train, y_train, x_test, y_test = get_data(args.dataset)
 
-    # accuracy(model, adv, y_test)
-    # np.save('./data/cifar_data/model/test_adv_PGD', adv)
-    np.save('./data/' + args.dataset + '_data/model/' + args.model + '_' + args.attack + '.npy', adv)
+                    # ## load Xuwei's trained svhn model
+                    # model = get_model(args.dataset, True)
+                    # model.load_weights('./data/' + args.dataset + '_data/model/' + args.model + '.h5')
+                    # model.compile(
+                    #     loss='categorical_crossentropy',
+                    #     # optimizer='adadelta',
+                    #     optimizer='adam',
+                    #     metrics=['accuracy']
+                    # )
 
-    # y_res = model.predict(x_train)
-    # y_res = softmax(y_res)
-    # y_res = y_res.argmax(axis=-1)
-    # y = y_train.argmax(axis=-1)
-    # idx = (y_res == y)
+                    model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
+                    model = load_model(model_path)
+                    model.summary()
+
+                    accuracy(model, x_test, y_test)
+
+                    adv = gen_adv_data(model, x_test, y_test, attack_name,
+                                    dataset_name, args.batch_size)
+
+                    # accuracy(model, adv, y_test)
+                    adv_dir = "{}{}/adv/{}/".format(DATA_DIR, dataset_name, model_name)
+                    if not os.path.exists(adv_dir):
+                        os.makedirs(adv_dir)
+                    adv_path = "{}{}.npy".format(adv_dir, attack_name)
+                    np.save(adv_path, adv)
