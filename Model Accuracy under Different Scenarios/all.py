@@ -1,5 +1,7 @@
 import argparse
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
 import random
 import shutil
 import warnings
@@ -17,8 +19,8 @@ from util import get_model
 import tensorflow as tf
 import os
 import prettytable as pt
+from pgd_attack import gen_adv_data
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 ####for solving some specific problems, don't care
 config = tf.ConfigProto()
@@ -96,36 +98,27 @@ if __name__ == '__main__':
                 'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
                 }
 
-    defense_names = ['FGSM','Benign', 'DeepHunter', 'PGD']
-    attack_names = ['Benign', 'DeepHunter', 'PGD']
+    defense_names = ['Benign', 'DeepHunter']
+    optim_defenses = ['PGD', 'FGSM']
+
+    attack_names = ['Benign', 'DeepHunter']
+    optim_attacks = ['PGD', 'FGSM']
 
     table = pt.PrettyTable()
-    table.field_names = ["Dataset", "Model"] + attack_names
-    table.align["Dataset", "Model"] = 'l'
+    table.field_names = ["Dataset", "Model"] + attack_names + optim_attacks
+    ### Set align
+    for field_name in ["Dataset", "Model"] + attack_names + optim_attacks:
+        table.align[field_name] = 'l'
 
 
     for dataset in datasets:
         for model_name in model_dict[dataset]:
-            '''Load dataset'''
-            x_adv_attacks = {}
-            for attack in attack_names:
-                # To-Do: to be modified after we generate using new paths.
-                if attack == 'Benign':
-                    ### benign dataset
-                    x_train, y_train, x_test, y_test = load_data(dataset)
-                    x_adv_attacks[attack] = x_test
-                elif attack == 'DeepHunter':
-                    ### deephunter dataset
-                    x_adv_attacks[attack] = np.load('./data/' + dataset + '_data/model/' + 'deephunter_adv_test_{}.npy'.format(model_name))
-                else:
-                    ### optimization-based attacks
-                    x_adv_attacks[attack] = np.load('./data/' + dataset + '_data/model/' + model_name + '_' + attack + '.npy')
 
             '''Load models for denfense'''
             from keras.models import load_model
 
             model_defenses = {}
-            for defense in defense_names:
+            for defense in defense_names + optim_defenses:
                 # To-Do: to be modified after we generate using new paths.    
                 if defense == 'Benign':
                     ### load benign model
@@ -139,17 +132,56 @@ if __name__ == '__main__':
                 else:
                     model_defenses[defense] = load_model('./data/' + dataset + '_data/model/' + defense + '_adv_' + model_name + '.h5')
 
-
+            '''Load dataset'''
+            x_adv_attacks = {}
+            for attack in attack_names + optim_attacks:
+                # To-Do: to be modified after we generate using new paths.
+                if attack == 'Benign':
+                    ### benign dataset
+                    x_train, y_train, x_test, y_test = load_data(dataset)
+                    x_adv_attacks[attack] = x_test
+                elif attack == 'DeepHunter':
+                    ### deephunter dataset
+                    x_adv_attacks[attack] = np.load('./data/' + dataset + '_data/model/' + 'deephunter_adv_test_{}.npy'.format(model_name))
+                else:
+                    ### optimization-based attacks
+                    x_adv_attacks[attack] = np.load('./data/' + dataset + '_data/model/' + model_name + '_' + attack + '.npy')
 
             '''Computing accuracy'''
-            for defense in defense_names:
+
+            ### get Benign data
+            defense = 'Benign'
+            begign_content = {}
+            for attack in attack_names + optim_attacks:
+                adv_examples = x_adv_attacks[attack]
+                if  (attack in optim_attacks):
+                    # generate adv examples
+                    adv_examples = gen_adv_data(model_defenses[defense], x_test, y_test, attack, dataset, 256)
+
+                criteria = AttackEvaluate(model_defenses[defense], x_test, y_test, adv_examples)
+                accuracy = 1 - criteria.misclassification_rate()
+                begign_content[attack] = accuracy
+
+            for defense in defense_names + optim_defenses:
                 if defense == 'Benign':
                     continue # don't show data for original model
                 row_content = [dataset, model_name + '_' + defense]
-                for attack in attack_names:
-                    criteria = AttackEvaluate(model_defenses[defense], x_test, y_test, x_adv_attacks[attack])
+                for attack in attack_names + optim_attacks:
+                    adv_examples = x_adv_attacks[attack]
+                    if  (attack in optim_attacks):
+                        # generate adv examples
+                        adv_examples = gen_adv_data(model_defenses[defense], x_test, y_test, attack, dataset, 256)
+
+                    criteria = AttackEvaluate(model_defenses[defense], x_test, y_test, adv_examples)
                     accuracy = 1 - criteria.misclassification_rate()
-                    row_content.append(str(round(accuracy * 100,2)))
+                    difference = accuracy - begign_content[attack]
+
+                    row_content.append(str(round(accuracy * 100,2)) + 
+                                        '(' + str(round(difference * 100,2)) + ')')
+                
                 table.add_row(row_content)
+            
+            
+            
             print(table)
 
