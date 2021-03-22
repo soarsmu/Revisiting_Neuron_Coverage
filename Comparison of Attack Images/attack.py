@@ -20,6 +20,7 @@ from art.attacks.evasion import FastGradientMethod
 from art.attacks.evasion import CarliniLInfMethod
 from art.attacks.evasion import ProjectedGradientDescent
 from art.attacks.evasion import BasicIterativeMethod
+from art.attacks.evasion import SaliencyMapMethod
 
 
 import tensorflow as tf
@@ -32,7 +33,7 @@ VERBOSE = False
 DATA_DIR = "../data/"
 MODEL_DIR = "../models/"
 DATASET_NAMES = ["mnist", "cifar", "svhn"]
-ATTACK_NAMES = ["bim", "cw", "fgsm", "pgd"]
+ATTACK_NAMES = ["bim", "cw", "fgsm", "jsma", "pgd"]
 
 ## [original from FSE author] for solving some specific problems, don't care
 config = tf.ConfigProto()
@@ -50,9 +51,15 @@ classifier_params["svhn"] = {"clip_values": (-0.5, 0.5)}
 
 ## attack parameters for generating adversarial images
 attack_params = {}
+
+
 attack_params['cw'] = {}
 for dataset_name in DATASET_NAMES :
     attack_params['cw'][dataset_name] = {}
+
+attack_params['jsma'] = {}
+for dataset_name in DATASET_NAMES:
+    attack_params['jsma'][dataset_name] = {}
 
 attack_params['pgd'] = {}
 attack_params['pgd']['mnist'] = {'eps': .3,
@@ -87,13 +94,7 @@ attack_params['fgsm']['cifar'] = {'eps': 16. / 255.
 attack_params['fgsm']['svhn'] = {'eps': 8. / 255.
                                 }
 
-# def JSMA(model, x, y):
-#     sess = K.get_session()
-#     model_wrap = KerasModelWrapper(model)
-#     jsma = SaliencyMapMethod(model_wrap, sess=sess)
-#     jsma_params = {'theta':1., 'gamma': 0.1, 'clip_min':0., 'clip_max':1.}
-#     adv = jsma.generate_np(x, **jsma_params)
-#     return adv
+
 
 def call_function_by_attack_name(attack_name):
     if attack_name not in ATTACK_NAMES:
@@ -103,7 +104,8 @@ def call_function_by_attack_name(attack_name):
         "fgsm": FastGradientMethod,
         "pgd": ProjectedGradientDescent,
         "bim": BasicIterativeMethod,
-        "cw": CarliniLInfMethod
+        "cw": CarliniLInfMethod,
+        "jsma": SaliencyMapMethod
     }[attack_name]
 
 
@@ -151,14 +153,9 @@ def accuracy(model, x, labels):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='attack for DNN')
-    parser.add_argument('-dataset', help="dataset to use",
-                        choices=['mnist', 'cifar', 'svhn'])
-    parser.add_argument('-model', help="target model to attack", choices=['vgg16', 'resnet20', 'lenet1', 'lenet4', 'lenet5', 'adv_lenet1', 'adv_lenet4',
-                                                                          'adv_lenet5', 'adv_vgg16', 'adv_resnet20', 'svhn_model', 'adv_svhn_model', 'svhn_first', 'adv_svhn_first', 'svhn_second', 'adv_svhn_second'])
-    parser.add_argument('-attack', help="attack model", choices=['cw', 'pgd'])
+    parser = argparse.ArgumentParser(description='Attack for DNN')
     parser.add_argument(
-        '-batch_size', help="attack batch size", type=int, default=1024)
+        '--batch_size', help="batch size for generating adversarial examples", type=int, default=1024)
 
     args = parser.parse_args()
     
@@ -186,8 +183,9 @@ if __name__ == '__main__':
     # attack_names = ["pgd", "cw", "fgsm"]
     # attack_names = ['fgsm']
     # attack_names = ['pgd']
-    attack_names = ['bim']
+    # attack_names = ['bim']
     # attack_names = ['cw']
+    attack_names = ['jsma']
 
     for dataset_name in datasets:
         if dataset_name in model_dict:
