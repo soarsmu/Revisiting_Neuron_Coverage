@@ -371,7 +371,7 @@ if __name__ == '__main__':
     datasets = ['mnist', 'cifar', 'svhn']
     model_dict = {
                 'mnist': ['lenet1', 'lenet4', 'lenet5'],
-                'cifar': ['vgg16', 'resnet20'],
+                'cifar': ['vgg16'], # , 'resnet20'
                 'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
                 }
     
