@@ -14,7 +14,6 @@ import numpy as np
 import tensorflow as tf
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 ####for solving some specific problems, don't care
 config = tf.ConfigProto()
@@ -42,12 +41,12 @@ def check_data_path(name):
 def call_function_by_attack_name(attack_name):
 
     return {
-        'FGSM': FastGradientMethod,
-        'GPD': ProjectedGradientDescent # eps=8/255, eps_step=1/255, max_iter=20, batch_size=512)
+        'FGSM': FastGradientMethod, # eps=0.2, batch_size=512
+        'PGD': ProjectedGradientDescent # eps=8/255, eps_step=1/255, max_iter=20, batch_size=512)
     }[attack_name]
 
 if __name__ == "__main__":
-    datasets = ['svhn', 'mnist', 'cifar']
+    datasets = ['mnist', 'svhn', 'cifar']
     model_dict = {
                 'mnist': ['lenet1', 'lenet4', 'lenet5'],
                 'cifar': ['vgg16', 'resnet20'],
@@ -63,7 +62,7 @@ if __name__ == "__main__":
             assert os.path.exists('../data/' + dataset + '_data/model/' + model_name + '.h5')
 
 
-    attack_names = ['FGSM']
+    attack_names = ['PGD']
     for attack_name in attack_names:
         for dataset in datasets:
             for model_name in model_dict[dataset]:
@@ -85,7 +84,7 @@ if __name__ == "__main__":
                 print('Accuracy test set: %.2f%%' % (np.sum(labels_test == labels_true) / x_test.shape[0] * 100))
 
                 classifier = KerasClassifier(clip_values=(-0.5, 0.5), model=model, use_logits=False)
-                attack = call_function_by_attack_name(attack_name)(classifier, eps=8/255, batch_size=512)
+                attack = call_function_by_attack_name(attack_name)(classifier, eps=8/255, eps_step=1/255, max_iter=20, batch_size=512)
 
                 x_test_pgd = attack.generate(x_test, y_test)
 
@@ -96,9 +95,14 @@ if __name__ == "__main__":
 
                 # Adversarial Training
                 trainer = AdversarialTrainer(classifier, attack, ratio=1.0)
-                trainer.fit(x_train, y_train, nb_epochs=60, batch_size=1024)
+                trainer.fit(x_train, y_train, nb_epochs=160, batch_size=1024)
 
                 classifier.save(filename= attack_name + '_adv_' + model_name + '.h5', path='../data/' + dataset + '_data/model/')
+                path = '../data/' + dataset + '_data/model/' + attack_name + '_adv_' + model_name + '.h5'
+                new_path = '../\'Model Accuracy under Different Scenarios\'/data/' + dataset + '_data/model/' + attack_name + '_adv_' + model_name + '.h5'
+                # move model to RQ3 folders
+                os.system('mv ' + path + ' ' + new_path)
+
 
                 # Evaluate the adversarially trained model on clean test set
                 labels_true = np.argmax(y_test, axis=1)
