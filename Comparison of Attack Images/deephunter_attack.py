@@ -4,12 +4,18 @@ import time
 import copy
 import matplotlib.pyplot as plt
 from keras import backend as K
+# import model
+from keras.models import load_model
 
 from keras import backend as K
 
 import tensorflow as tf
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+DATA_DIR = "../data/"
+MODEL_DIR = "../models/"
+
 
 ####for solving some specific problems, don't care
 config = tf.ConfigProto()
@@ -286,13 +292,13 @@ def mutate(img, dataset):
     return img_new
 
 # the data is in range(-.5, .5)
-def load_data(name):
-    assert (name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
-    name = name.lower()
-    x_train = np.load('./data/' + name + '_data/' + name + '_x_train.npy')
-    y_train = np.load('./data/' + name + '_data/' + name + '_y_train.npy')
-    x_test = np.load('./data/' + name + '_data/' + name + '_x_test.npy')
-    y_test = np.load('./data/' + name + '_data/' + name + '_y_test.npy')
+def load_data(dataset_name):
+    assert (dataset_name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
+    dataset_name = dataset_name.lower()
+    x_train = np.load(DATA_DIR + dataset_name + '/benign/x_train.npy')
+    y_train = np.load(DATA_DIR + dataset_name + '/benign/y_train.npy')
+    x_test = np.load(DATA_DIR + dataset_name + '/benign/x_test.npy')
+    y_test = np.load(DATA_DIR + dataset_name + '/benign/y_test.npy')
     return x_train, y_train, x_test, y_test
 
 
@@ -304,28 +310,43 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    dataset = args.dataset
-    model_name = args.model
+    dataset_name = "mnist"
+    model_name = "lenet1"
+    
+    datasets = ['mnist', 'cifar', 'svhn']
+    model_dict = {
+        'mnist': ['lenet1', 'lenet4', 'lenet5'],
+        'cifar': ['vgg16', 'resnet20'],
+        'svhn': ['svhn_model', 'svhn_first', 'svhn_second']
+    }
+    
+    attack_name = "DeepHunter"
 
-    # load dataset
-    x_train, y_train, x_test, y_test = load_data(dataset)
+    for dataset_name in datasets:
+        if dataset_name in model_dict :
+            for model_name in model_dict[dataset_name]:
 
-    # import model
-    from keras.models import load_model
-    model = load_model('./data/' + dataset + '_data/model/' + model_name + '.h5')
-    model.summary()
+                # load dataset
+                x_train, y_train, x_test, y_test = load_data(dataset_name)
 
-    x_adv = np.array([])
-    for i in range(1000):
-        new_image = mutate(x_test[i], dataset)
+                model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
+                model = load_model(model_path)
+                model.summary()
 
-        if x_adv.size == 0:
-            x_adv = np.expand_dims(new_image, axis=0)
-        else:
-            x_adv = np.concatenate((x_adv, np.expand_dims(new_image, axis=0)), axis=0)
+                x_adv = np.array([])
+                for i in range(1000):
+                    new_image = mutate(x_test[i], dataset_name)
 
-    print(x_adv.shape)
-    np.save('./data/' + dataset + '_data/model/' + 'deephunter_adv_test_{}.npy'.format(model_name), x_adv)
+                    if x_adv.size == 0:
+                        x_adv = np.expand_dims(new_image, axis=0)
+                    else:
+                        x_adv = np.concatenate((x_adv, np.expand_dims(new_image, axis=0)), axis=0)
+
+                adv_dir = "{}{}/adv/{}/".format(DATA_DIR, dataset_name, model_name)
+                if not os.path.exists(adv_dir):
+                    os.makedirs(adv_dir)
+                adv_path = "{}{}.npy".format(adv_dir, attack_name)
+                np.save(adv_path, x_adv)
 
 
 
