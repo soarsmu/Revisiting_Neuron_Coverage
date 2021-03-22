@@ -316,14 +316,11 @@ def compare_nc(x_new, x_old, layer):
 
 
 if __name__ == '__main__':
-    # dataset = 'mnist'
-    # model_name = 'lenet1'
-    # model_layer = 8
 
     datasets = ['mnist', 'cifar', 'svhn']
     model_dict = {
                 'mnist': ['lenet1', 'lenet4', 'lenet5'],
-                'cifar': ['vgg16', 'resnet20'],
+                'cifar': ['vgg16'], # 'resnet20' has error, related to layer.
                 'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
                 }
 
