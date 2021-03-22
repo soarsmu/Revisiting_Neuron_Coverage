@@ -28,100 +28,12 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 DATA_DIR = "../data/"
 MODEL_DIR = "../models/"
 
-####for solving some specific problems, don't care
+## [original from FSE author] for solving some specific problems, don't care
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
 
-
-# def JSMA(model, x, y):
-#     sess = K.get_session()
-#     model_wrap = KerasModelWrapper(model)
-#     jsma = SaliencyMapMethod(model_wrap, sess=sess)
-#     jsma_params = {'theta':1., 'gamma': 0.1, 'clip_min':0., 'clip_max':1.}
-#     adv = jsma.generate_np(x, **jsma_params)
-#     return adv
-#
-#
-# def FGSM(model, x, y):
-#     sess = K.get_session()
-#     model_wrap = KerasModelWrapper(model)
-#     fgsm = FastGradientMethod(model_wrap, sess=sess)
-#     fgsm_params={'y':y, 'eps':0.2, 'clip_min':0., 'clip_max': 1.}
-#     adv = fgsm.generate_np(x, **fgsm_params)
-#     return adv
-#
-#
-# def BIM(model, x, y):
-#     sess = K.get_session()
-#     model_wrap = KerasModelWrapper(model)
-#     bim = BasicIterativeMethod(model_wrap, sess=sess)
-#     bim_params={'eps_iter': 0.03, 'nb_iter': 10, 'y':y, 'clip_min': 0., 'clip_max': 1.}
-#     adv = bim.generate_np(x, **bim_params)
-#     return adv
-
-# # invoke the method for many times leads to multiple symbolic graph and may cause OOM
-# def CW(model, x, y, batch):
-#     sess = K.get_session()
-#     model_wrap = KerasModelWrapper(model)
-#     cw = CarliniWagnerL2(model_wrap, sess=sess)
-#     cw_params = {'binary_search_steps': 1,
-#                  'y': y,
-#                  'learning_rate': .1,
-#                  'max_iterations': 50,
-#                  'initial_const': 10,
-#                  'batch_size': batch,
-#                  'clip_min': -0.5,
-#                  'clip_max': 0.5}
-#     adv = cw.generate_np(x, **cw_params)# invoke the method for many times leads to multiple symbolic graph and may cause OOM
-# # def CW(model, x, y, batch):
-# #     sess = K.get_session()
-# #     model_wrap = KerasModelWrapper(model)
-# #     cw = CarliniWagnerL2(model_wrap, sess=sess)
-# #     cw_params = {'binary_search_steps': 1,
-# #                  'y': y,
-# #                  'learning_rate': .1,
-# #                  'max_iterations': 50,
-# #                  'initial_const': 10,
-# #                  'batch_size': batch,
-# #                  'clip_min': -0.5,
-# #                  'clip_max': 0.5}
-# #     adv = cw.generate_np(x, **cw_params)
-# #     return adv
-# #
-# #
-# # # for mnist, eps=.3, eps_iter=.03, nb_iter=10
-# # # for cifar and svhn, eps=8/255, eps_iter=.01, nb_iter=30
-# # def PGD(model, x, y, batch):
-# #     sess = K.get_session()
-# #     model_wrap = KerasModelWrapper(model)
-# #     pgd = ProjectedGradientDescent(model_wrap, sess=sess)
-# #     pgd_params = {'eps': 8. / 255.,
-# #                   'eps_iter': .01,
-# #                   'nb_iter': 30.,
-# #                   'clip_min': -0.5,
-# #                   'clip_max': 0.5,
-# #                   'y': y}
-# #     adv = pgd.generate_np(x, **pgd_params)
-# #     return adv
-#     return adv
-#
-#
-# # for mnist, eps=.3, eps_iter=.03, nb_iter=10
-# # for cifar and svhn, eps=8/255, eps_iter=.01, nb_iter=30
-# def PGD(model, x, y, batch):
-#     sess = K.get_session()
-#     model_wrap = KerasModelWrapper(model)
-#     pgd = ProjectedGradientDescent(model_wrap, sess=sess)
-#     pgd_params = {'eps': 8. / 255.,
-#                   'eps_iter': .01,
-#                   'nb_iter': 30.,
-#                   'clip_min': -0.5,
-#                   'clip_max': 0.5,
-#                   'y': y}
-#     adv = pgd.generate_np(x, **pgd_params)
-#     return adv
-
+## attack parameters for generating adversarial images
 attack_params = {}
 attack_params['CW'] = {}
 for dataset_name in ['mnist', 'cifar', 'svhn'] :
@@ -134,20 +46,18 @@ for dataset_name in ['mnist', 'cifar', 'svhn'] :
                                          }
 
 attack_params['PGD'] = {}
-attack_params['PGD']['cifar'] = {'eps': 16. / 255.,
-                      'eps_iter': 2. / 255.,
-                      'nb_iter': 30.
-                      # 'clip_min': -0.5,
-                      # 'clip_max': 0.5
-                      }
-
 attack_params['PGD']['mnist'] = {'eps': .3,
                       'eps_iter': .03,
                       'nb_iter': 20.,
                       'clip_min': -0.5,
                       'clip_max': 0.5
                       }
-            
+attack_params['PGD']['cifar'] = {'eps': 16. / 255.,
+                      'eps_iter': 2. / 255.,
+                      'nb_iter': 30.
+                      # 'clip_min': -0.5,
+                      # 'clip_max': 0.5
+                      }
 attack_params['PGD']['svhn'] = {'eps': 8. / 255.,
                       'eps_iter': 0.01,
                       'nb_iter': 30.,
@@ -155,26 +65,52 @@ attack_params['PGD']['svhn'] = {'eps': 8. / 255.,
                       'clip_max': 0.5
                       }
 
-attack_params['FGSM'] = {}
-attack_params['FGSM']['cifar'] = {'eps': 16. / 255.,
-                                 # 'clip_min': -0.5,
-                                 # 'clip_max': 0.5
-                                 }
 
+# def FGSM(model, x, y):
+#     sess = K.get_session()
+#     model_wrap = KerasModelWrapper(model)
+#     fgsm = FastGradientMethod(model_wrap, sess=sess)
+#     fgsm_params={'y':y, 'eps':0.2, 'clip_min':0., 'clip_max': 1.}
+#     adv = fgsm.generate_np(x, **fgsm_params)
+#     return adv
+attack_params['FGSM'] = {}
 attack_params['FGSM']['mnist'] = {'eps': .3,
                                  'clip_min': -0.5,
                                  'clip_max': 0.5
                                  }
-
+attack_params['FGSM']['cifar'] = {'eps': 16. / 255.,
+                                 # 'clip_min': -0.5,
+                                 # 'clip_max': 0.5
+                                 }
 attack_params['FGSM']['svhn'] = {'eps': 8. / 255.,
                                 'clip_min': -0.5,
                                 'clip_max': 0.5
                                 }
 
+
+# def BIM(model, x, y):
+#     sess = K.get_session()
+#     model_wrap = KerasModelWrapper(model)
+#     bim = BasicIterativeMethod(model_wrap, sess=sess)
+#     bim_params={'eps_iter': 0.03, 'nb_iter': 10, 'y':y, 'clip_min': 0., 'clip_max': 1.}
+#     adv = bim.generate_np(x, **bim_params)
+#     return adv
 attack_params['BIM'] = {}
 for dataset_name in ['mnist', 'cifar', 'svhn']:
     attack_params['BIM'][dataset_name] = {
         'eps_iter': 0.03, 'nb_iter': 10, 'clip_min': 0., 'clip_max': 1.}
+
+
+# def JSMA(model, x, y):
+#     sess = K.get_session()
+#     model_wrap = KerasModelWrapper(model)
+#     jsma = SaliencyMapMethod(model_wrap, sess=sess)
+#     jsma_params = {'theta':1., 'gamma': 0.1, 'clip_min':0., 'clip_max':1.}
+#     adv = jsma.generate_np(x, **jsma_params)
+#     return adv
+
+
+
 
 # integrate all attack method in one function and only construct graph once
 def gen_adv_data(model, x, y, attack_name, dataset_name, batch_size=2048):
@@ -229,23 +165,6 @@ def gen_adv_data(model, x, y, attack_name, dataset_name, batch_size=2048):
 
     return adv_x_all
 
-
-# def gen_adv_data(model, x, y, method, batch=4000):
-#     data_num = x.shape[0]
-#     begin, end = 0, batch
-#     adv_x_all = np.zeros_like(x)
-#     while begin < data_num:
-#         start_time = time.time()
-#         adv_x = method(model, x[begin:end], y[begin:end], end-begin)
-#         adv_x_all[begin: end] = adv_x
-#         print(begin, end, "done")
-#         begin += batch
-#         end += batch
-#         if end >= data_num:
-#             end = data_num
-#         end_time = time.time()
-#         print("time: ", end_time - start_time)
-#     return adv_x_all
 
 
 # the data is in range(-.5, .5)
@@ -315,33 +234,25 @@ if __name__ == '__main__':
         if dataset_name in model_dict:
             for model_name in model_dict[dataset_name]:
                 for attack_name in attack_names :
-                    # ## get MNIST or SVHN
+                    
+                    ## Load benign images from mnist, cifar, or svhn
                     x_train, y_train, x_test, y_test = load_data(dataset_name)
 
-                    ## get CIFAR
-                    # from util import get_data
-                    # x_train, y_train, x_test, y_test = get_data(args.dataset)
-
-                    # ## load Xuwei's trained svhn model
-                    # model = get_model(args.dataset, True)
-                    # model.load_weights('./data/' + args.dataset + '_data/model/' + args.model + '.h5')
-                    # model.compile(
-                    #     loss='categorical_crossentropy',
-                    #     # optimizer='adadelta',
-                    #     optimizer='adam',
-                    #     metrics=['accuracy']
-                    # )
-
+                    ## Load keras pretrained model for the specific dataset
                     model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
                     model = load_model(model_path)
                     model.summary()
 
+                    ## Check the accuracy of the original model on benign images
                     accuracy(model, x_test, y_test)
 
+                    ## Generate adversarial images
                     adv = gen_adv_data(model, x_test, y_test, attack_name,
                                     dataset_name, args.batch_size)
-
+                    
                     # accuracy(model, adv, y_test)
+
+                    ## Save the adversarial images into external file
                     adv_dir = "{}{}/adv/{}/".format(DATA_DIR, dataset_name, model_name)
                     if not os.path.exists(adv_dir):
                         os.makedirs(adv_dir)
