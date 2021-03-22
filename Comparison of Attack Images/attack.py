@@ -3,16 +3,23 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import os
 import argparse
 import sys, logging
 import time
+from datetime import datetime
+import pytz
 import numpy as np
+
+import warnings
+warnings.filterwarnings("ignore", message=r"Passing", category=FutureWarning)
 
 import keras
 from keras import backend as K
 ## load mine trained model
 from keras.models import load_model
 
+import art
 from art.attacks.evasion import FastGradientMethod
 from art.estimators.classification import KerasClassifier
 
@@ -25,9 +32,28 @@ from art.attacks.evasion import AutoProjectedGradientDescent
 
 
 import tensorflow as tf
-import os
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+from tensorflow.python.client import device_lib
+
+
+def get_available_gpus():
+    local_device_protos = device_lib.list_local_devices()
+    return [x.name for x in local_device_protos if x.device_type == 'GPU']
+
+
+## custom time zone for logger
+def customTime(*args):
+    utc_dt = pytz.utc.localize(datetime.utcnow())
+    converted = utc_dt.astimezone(pytz.timezone("Singapore"))
+    return converted.timetuple()
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+## [original from FSE author] for solving some specific problems, don't care
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+sess = tf.Session(config=config)
+
 
 VERBOSE = False
 
@@ -48,12 +74,6 @@ PGD = "pgd"
 APGD = "apgd"
 ATTACK_NAMES = [BIM, CW, FGSM, JSMA, PGD, APGD]
 ## Note:  already tried APGD, but it doesn't work
-
-
-## [original from FSE author] for solving some specific problems, don't care
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
-sess = tf.Session(config=config)
 
 
 ## classifier paramaters
@@ -133,6 +153,8 @@ def call_function_by_attack_name(attack_name):
 
 # integrate all attack method in one function and only construct graph once
 def gen_adv_data(model, x, y, attack_name, dataset_name, batch_size=2048):
+    logging.getLogger().setLevel(logging.CRITICAL)
+    
     classifier_param = classifier_params[dataset_name]
     classifier = KerasClassifier(model, **classifier_param)
     
@@ -144,7 +166,8 @@ def gen_adv_data(model, x, y, attack_name, dataset_name, batch_size=2048):
     
     data_num = x.shape[0]
     adv_x = attack.generate(x=x, y=y)
-
+    
+    logging.getLogger().setLevel(logging.INFO)
     return adv_x
 
 
@@ -180,6 +203,9 @@ if __name__ == '__main__':
         '--batch_size', help="batch size for generating adversarial examples", type=int, default=1024)
 
     args = parser.parse_args()
+
+    logging.Formatter.converter = customTime
+    logger = logging.getLogger("adversarial_images_generation")
     
     dataset_name = MNIST
     model_name = "lenet1"
@@ -215,6 +241,22 @@ if __name__ == '__main__':
             for model_name in model_dict[dataset_name]:
                 for attack_name in attack_names :
                     
+                    ## Prepare directory for saving adversarial images and logging
+                    adv_dir = "{}{}/adv/{}/{}/".format(
+                        DATA_DIR, dataset_name, model_name, attack_name)
+                    if not os.path.exists(adv_dir):
+                        os.makedirs(adv_dir)
+                    logging.basicConfig(
+                        format='[%(asctime)s] - %(message)s',
+                        datefmt='%Y/%m/%d %H:%M:%S',
+                        level=logging.INFO,
+                        handlers=[
+                            logging.FileHandler(
+                                os.path.join(adv_dir, 'output.log')),
+                            logging.StreamHandler()
+                        ])
+
+
                     ## Load benign images from mnist, cifar, or svhn
                     x_train, y_train, x_test, y_test = load_data(dataset_name)
 
@@ -222,14 +264,20 @@ if __name__ == '__main__':
                     model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
                     model = load_model(model_path)
                     model.summary()
+                    
+                    logger.info("")
+                    logger.info("Generating Adversarial Images")
+                    logger.info("Use GPU: {}".format(len(get_available_gpus()) > 0))
+                    if len(get_available_gpus()) > 0 :
+                        logger.info("Available GPUs: {}".format(get_available_gpus()))
 
-                    print("Dataset: {}".format(dataset_name))
-                    print("Model: {}".format(model_name))
-                    print("Attack: {}".format(attack_name))
+                    logger.info("Dataset: {}".format(dataset_name))
+                    logger.info("Model: {}".format(model_name))
+                    logger.info("Attack: {}".format(attack_name))
 
                     ## Check the accuracy of the original model on benign images
                     acc = accuracy(model, x_test, y_test)
-                    print("Model accuracy on benign images: {:.2f}%".format(acc))
+                    logger.info("Model accuracy on benign images: {:.2f}%".format(acc))
 
                     ## Generate adversarial images
                     x_adv = gen_adv_data(model, x_test, y_test, attack_name,
@@ -237,12 +285,9 @@ if __name__ == '__main__':
                     
                     ## Check the accuracy of the original model on adversarial images
                     acc = accuracy(model, x_adv, y_test)
-                    print("Model accuracy on adversarial images: {:.2f}%".format(acc))
+                    logger.info("Model accuracy on adversarial images: {:.2f}%".format(acc))
                     
                     ## Save the adversarial images into external file
-                    adv_dir = "{}{}/adv/{}/{}/".format(DATA_DIR, dataset_name, model_name, attack_name)
-                    if not os.path.exists(adv_dir):
-                        os.makedirs(adv_dir)
                     x_adv_path = "{}x_test.npy".format(adv_dir)
                     np.save(x_adv_path, x_adv)
 
@@ -250,3 +295,5 @@ if __name__ == '__main__':
                     ##       thus it's not a must to save the y_test
                     y_adv_path = "{}y_test.npy".format(adv_dir)
                     np.save(y_adv_path, y_test)
+
+                    logger.info("Adversarial images are saved at {}".format(adv_dir))
