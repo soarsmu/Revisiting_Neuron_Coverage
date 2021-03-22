@@ -202,12 +202,12 @@ if __name__ == '__main__':
     # }
 
     attack_names = ATTACK_NAMES
-    # attack_names = [FGSM]
+    attack_names = [FGSM]
     # attack_names = [PGD]
     # attack_names = [BIM]
     # attack_names = [CW]
     # attack_names = [JSMA]
-    attack_names = [APGD]
+    # attack_names = [APGD]
 
 
     for dataset_name in datasets:
@@ -240,8 +240,13 @@ if __name__ == '__main__':
                     print("Model accuracy on adversarial images: {:.2f}%".format(acc))
                     
                     ## Save the adversarial images into external file
-                    adv_dir = "{}{}/adv/{}/".format(DATA_DIR, dataset_name, model_name)
+                    adv_dir = "{}{}/adv/{}/{}/".format(DATA_DIR, dataset_name, model_name, attack_name)
                     if not os.path.exists(adv_dir):
                         os.makedirs(adv_dir)
-                    adv_path = "{}{}.npy".format(adv_dir, attack_name)
-                    np.save(adv_path, x_adv)
+                    x_adv_path = "{}x_test.npy".format(adv_dir)
+                    np.save(x_adv_path, x_adv)
+
+                    ## Note: y_test will exactly be the same with the benign y_test
+                    ##       thus it's not a must to save the y_test
+                    y_adv_path = "{}y_test.npy".format(adv_dir)
+                    np.save(y_adv_path, y_test)
