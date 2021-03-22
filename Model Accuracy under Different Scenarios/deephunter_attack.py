@@ -301,30 +301,36 @@ def load_data(name):
 
 if __name__ == '__main__':
 
-    dataset = 'mnist'
-    model_name = 'lenet1'
-    # model_layer = 18
+    datasets = ['mnist', 'cifar', 'svhn']
+    model_dict = {
+                'mnist': ['lenet1', 'lenet4', 'lenet5'],
+                'cifar': ['vgg16'], # , 'resnet20'
+                'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
+                }
+                
+    for dataset in datasets:
+        for model_name in model_dict[dataset]:
+            # load dataset
+            x_train, y_train, x_test, y_test = load_data(dataset)
 
-    # load dataset
-    x_train, y_train, x_test, y_test = load_data(dataset)
-
-    # import model
-    from keras.models import load_model
-    model = load_model('./data/' + dataset + '_data/model/' + model_name + '.h5')
-    model.summary()
+            # import model
+            from keras.models import load_model
+            # why attack the original model?
+            model = load_model('./data/' + dataset + '_data/model/' + model_name + '.h5')
+            model.summary()
 
 
-    x_adv = np.array([])
-    for i in range(3000):
-        new_image = mutate(x_test[i], dataset)
+            x_adv = np.array([])
+            for i in range(3000):
+                new_image = mutate(x_test[i], dataset)
 
-        if x_adv.size == 0:
-            x_adv = np.expand_dims(new_image, axis=0)
-        else:
-            x_adv = np.concatenate((x_adv, np.expand_dims(new_image, axis=0)), axis=0)
+                if x_adv.size == 0:
+                    x_adv = np.expand_dims(new_image, axis=0)
+                else:
+                    x_adv = np.concatenate((x_adv, np.expand_dims(new_image, axis=0)), axis=0)
 
-    print(x_adv.shape)
-    np.save('./data/' + dataset + '_data/model/' + 'deephunter_adv_test_{}.npy'.format(model_name), x_adv)
+            print(x_adv.shape)
+            np.save('./data/' + dataset + '_data/model/' + 'deephunter_adv_test_{}.npy'.format(model_name), x_adv)
 
 
 
