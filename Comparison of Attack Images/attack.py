@@ -4,12 +4,12 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
-import sys
-from util import get_model
+import sys, logging
 import time
 import numpy as np
-from keras import backend as K
+
 import keras
+from keras import backend as K
 ## load mine trained model
 from keras.models import load_model
 
@@ -21,6 +21,7 @@ from art.attacks.evasion import CarliniLInfMethod
 from art.attacks.evasion import ProjectedGradientDescent
 from art.attacks.evasion import BasicIterativeMethod
 from art.attacks.evasion import SaliencyMapMethod
+from art.attacks.evasion import AutoProjectedGradientDescent
 
 
 import tensorflow as tf
@@ -44,7 +45,10 @@ CW = "cw"
 FGSM = "fgsm"
 JSMA = "jsma"
 PGD = "pgd"
-ATTACK_NAMES = [BIM, CW, FGSM, JSMA, PGD]
+APGD = "apgd"
+ATTACK_NAMES = [BIM, CW, FGSM, JSMA, PGD, APGD]
+## Note:  already tried APGD, but it doesn't work
+
 
 ## [original from FSE author] for solving some specific problems, don't care
 config = tf.ConfigProto()
@@ -61,8 +65,10 @@ classifier_params[MNIST] = {"clip_values": (-0.5, 0.5)}
 classifier_params[SVHN] = {"clip_values": (-0.5, 0.5)}
 
 ## attack parameters for generating adversarial images
+## Note: I use the same format with FSE paper, i.e. params[<attack>][<dataset>]
+##       we may change the format into params[<dataset>][<attack>]
+##       to track the consistent epsilon for each dataset
 attack_params = {}
-
 
 attack_params[CW] = {}
 for dataset_name in DATASET_NAMES :
@@ -71,6 +77,10 @@ for dataset_name in DATASET_NAMES :
 attack_params[JSMA] = {}
 for dataset_name in DATASET_NAMES:
     attack_params[JSMA][dataset_name] = {}
+
+attack_params[APGD] = {}
+for dataset_name in DATASET_NAMES:
+    attack_params[APGD][dataset_name] = {}
 
 attack_params[PGD] = {}
 attack_params[PGD][MNIST] = {'eps': .3,
@@ -112,11 +122,12 @@ def call_function_by_attack_name(attack_name):
         print('Unsupported attack: {}'.format(attack_name))
         sys.exit(1)
     return {
-        FGSM: FastGradientMethod,
-        PGD: ProjectedGradientDescent,
+        APGD: AutoProjectedGradientDescent,
         BIM: BasicIterativeMethod,
         CW: CarliniLInfMethod,
-        JSMA: SaliencyMapMethod
+        FGSM: FastGradientMethod,
+        JSMA: SaliencyMapMethod,
+        PGD: ProjectedGradientDescent
     }[attack_name]
 
 
@@ -190,13 +201,14 @@ if __name__ == '__main__':
     #     CIFAR: ['vgg16'],
     # }
 
-    attack_names = [PGD, CW, FGSM, BIM, JSMA]
-    # attack_names = [PGD, CW, FGSM]
+    attack_names = ATTACK_NAMES
     # attack_names = [FGSM]
     # attack_names = [PGD]
     # attack_names = [BIM]
     # attack_names = [CW]
     # attack_names = [JSMA]
+    attack_names = [APGD]
+
 
     for dataset_name in datasets:
         if dataset_name in model_dict:
