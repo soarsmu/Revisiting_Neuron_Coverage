@@ -32,8 +32,19 @@ VERBOSE = False
 
 DATA_DIR = "../data/"
 MODEL_DIR = "../models/"
-DATASET_NAMES = ["mnist", "cifar", "svhn"]
-ATTACK_NAMES = ["bim", "cw", "fgsm", "jsma", "pgd"]
+
+MNIST = "mnist"
+CIFAR = "cifar"
+SVHN = "svhn"
+
+DATASET_NAMES = [MNIST, CIFAR, SVHN]
+
+BIM = "bim"
+CW = "cw"
+FGSM = "fgsm"
+JSMA = "jsma"
+PGD = "pgd"
+ATTACK_NAMES = [BIM, CW, FGSM, JSMA, PGD]
 
 ## [original from FSE author] for solving some specific problems, don't care
 config = tf.ConfigProto()
@@ -46,52 +57,52 @@ sess = tf.Session(config=config)
 classifier_params = {}
 for dataset_name in DATASET_NAMES :
     classifier_params[dataset_name] = {}
-classifier_params["mnist"] = {"clip_values": (-0.5, 0.5)}
-classifier_params["svhn"] = {"clip_values": (-0.5, 0.5)}
+classifier_params[MNIST] = {"clip_values": (-0.5, 0.5)}
+classifier_params[SVHN] = {"clip_values": (-0.5, 0.5)}
 
 ## attack parameters for generating adversarial images
 attack_params = {}
 
 
-attack_params['cw'] = {}
+attack_params[CW] = {}
 for dataset_name in DATASET_NAMES :
-    attack_params['cw'][dataset_name] = {}
+    attack_params[CW][dataset_name] = {}
 
-attack_params['jsma'] = {}
+attack_params[JSMA] = {}
 for dataset_name in DATASET_NAMES:
-    attack_params['jsma'][dataset_name] = {}
+    attack_params[JSMA][dataset_name] = {}
 
-attack_params['pgd'] = {}
-attack_params['pgd']['mnist'] = {'eps': .3,
+attack_params[PGD] = {}
+attack_params[PGD][MNIST] = {'eps': .3,
                       'eps_step': .03,
                       'max_iter': 20
                       }
-attack_params['pgd']['cifar'] = {'eps': 16. / 255.,
+attack_params[PGD][CIFAR] = {'eps': 16. / 255.,
                       'eps_step': 2. / 255.,
                       'max_iter': 30
                       }
-attack_params['pgd']['svhn'] = {'eps': 8. / 255.,
+attack_params[PGD][SVHN] = {'eps': 8. / 255.,
                       'eps_step': 0.01,
                       'max_iter': 30
                       }
 
 # use the same epsilon used in pgd
-attack_params['bim'] = {}
-attack_params['bim']['mnist'] = {'eps': .3
+attack_params[BIM] = {}
+attack_params[BIM][MNIST] = {'eps': .3
                                   }
-attack_params['bim']['cifar'] = {'eps': 16. / 255.
+attack_params[BIM][CIFAR] = {'eps': 16. / 255.
                                   }
-attack_params['bim']['svhn'] = {'eps': 8. / 255.
+attack_params[BIM][SVHN] = {'eps': 8. / 255.
                                  }
 
 
 # use the same epsilon used in pgd
-attack_params['fgsm'] = {}
-attack_params['fgsm']['mnist'] = {'eps': .3
+attack_params[FGSM] = {}
+attack_params[FGSM][MNIST] = {'eps': .3
                                  }
-attack_params['fgsm']['cifar'] = {'eps': 16. / 255.
+attack_params[FGSM][CIFAR] = {'eps': 16. / 255.
                                  }
-attack_params['fgsm']['svhn'] = {'eps': 8. / 255.
+attack_params[FGSM][SVHN] = {'eps': 8. / 255.
                                 }
 
 
@@ -101,11 +112,11 @@ def call_function_by_attack_name(attack_name):
         print('Unsupported attack: {}'.format(attack_name))
         sys.exit(1)
     return {
-        "fgsm": FastGradientMethod,
-        "pgd": ProjectedGradientDescent,
-        "bim": BasicIterativeMethod,
-        "cw": CarliniLInfMethod,
-        "jsma": SaliencyMapMethod
+        FGSM: FastGradientMethod,
+        PGD: ProjectedGradientDescent,
+        BIM: BasicIterativeMethod,
+        CW: CarliniLInfMethod,
+        JSMA: SaliencyMapMethod
     }[attack_name]
 
 
@@ -116,7 +127,7 @@ def gen_adv_data(model, x, y, attack_name, dataset_name, batch_size=2048):
     
     attack_param = attack_params[attack_name][dataset_name]
     attack_param["batch_size"] = batch_size
-    if attack_name in ["cw", "pgd"] : ## some attacks don't have verbose parameter, e.g. bim
+    if attack_name in [CW, PGD] : ## some attacks don't have verbose parameter, e.g. bim
         attack_param["verbose"] = VERBOSE
     attack = call_function_by_attack_name(attack_name)(classifier, **attack_param)
     
@@ -159,33 +170,33 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
-    dataset_name = "mnist"
+    dataset_name = MNIST
     model_name = "lenet1"
-    attack_name = "pgd"
+    attack_name = PGD
 
-    datasets = ['mnist', 'cifar', 'svhn']
+    datasets = [MNIST, CIFAR, SVHN]
 
     # model_dict = {
-    #     'mnist': ['lenet1', 'lenet4', 'lenet5'],
-    #     'cifar': ['vgg16', 'resnet20'],
-    #     'svhn': ['svhn_model', 'svhn_first', 'svhn_second']
+    #     MNIST: ['lenet1', 'lenet4', 'lenet5'],
+    #     CIFAR: ['vgg16', 'resnet20'],
+    #     SVHN: ['svhn_model', 'svhn_first', 'svhn_second']
     # }
     
     model_dict = {
-        'mnist': ['lenet1']
+        MNIST: ['lenet1']
     }
 
     # model_dict = {
-    #     'cifar': ['vgg16'],
+    #     CIFAR: ['vgg16'],
     # }
 
-    # attack_names = ["pgd", "cw", "fgsm", "bim"]
-    # attack_names = ["pgd", "cw", "fgsm"]
-    # attack_names = ['fgsm']
-    # attack_names = ['pgd']
-    # attack_names = ['bim']
-    # attack_names = ['cw']
-    attack_names = ['jsma']
+    attack_names = [PGD, CW, FGSM, BIM, JSMA]
+    # attack_names = [PGD, CW, FGSM]
+    # attack_names = [FGSM]
+    # attack_names = [PGD]
+    # attack_names = [BIM]
+    # attack_names = [CW]
+    # attack_names = [JSMA]
 
     for dataset_name in datasets:
         if dataset_name in model_dict:
