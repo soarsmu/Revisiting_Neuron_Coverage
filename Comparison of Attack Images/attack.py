@@ -29,6 +29,8 @@ from art.attacks.evasion import ProjectedGradientDescent
 from art.attacks.evasion import BasicIterativeMethod
 from art.attacks.evasion import SaliencyMapMethod
 from art.attacks.evasion import AutoProjectedGradientDescent
+from art.attacks.evasion import DeepFool, NewtonFool
+from art.attacks.evasion import SquareAttack, SpatialTransformation
 
 
 import tensorflow as tf
@@ -72,7 +74,11 @@ FGSM = "fgsm"
 JSMA = "jsma"
 PGD = "pgd"
 APGD = "apgd"
-ATTACK_NAMES = [BIM, CW, FGSM, JSMA, PGD, APGD]
+DF = "deepfool"
+NF = "newtonfool"
+SA = "squareattack"
+ST = "spatialtransformation"
+ATTACK_NAMES = [APGD, BIM, CW, DF, FGSM, JSMA, NF, PGD, SA, ST]
 ## Note:  already tried APGD, but it doesn't work
 
 
@@ -90,17 +96,39 @@ classifier_params[SVHN] = {"clip_values": (-0.5, 0.5)}
 ##       to track the consistent epsilon for each dataset
 attack_params = {}
 
+## TO DO: read the paper for each attack
+##        make sure to use the correct parameters
+##        for each combination of attack and dataset
+
+# empty means using the original parameters for ART
+attack_params[APGD] = {}
+for dataset_name in DATASET_NAMES:
+    attack_params[APGD][dataset_name] = {}
+
 attack_params[CW] = {}
 for dataset_name in DATASET_NAMES :
     attack_params[CW][dataset_name] = {}
+
+attack_params[DF] = {}
+for dataset_name in DATASET_NAMES:
+    attack_params[DF][dataset_name] = {}
+
+attack_params[NF] = {}
+for dataset_name in DATASET_NAMES:
+    attack_params[NF][dataset_name] = {}
 
 attack_params[JSMA] = {}
 for dataset_name in DATASET_NAMES:
     attack_params[JSMA][dataset_name] = {}
 
-attack_params[APGD] = {}
+attack_params[SA] = {}
 for dataset_name in DATASET_NAMES:
-    attack_params[APGD][dataset_name] = {}
+    attack_params[SA][dataset_name] = {}
+
+attack_params[ST] = {}
+for dataset_name in DATASET_NAMES:
+    attack_params[ST][dataset_name] = {}
+
 
 attack_params[PGD] = {}
 attack_params[PGD][MNIST] = {'eps': .3,
@@ -145,9 +173,13 @@ def call_function_by_attack_name(attack_name):
         APGD: AutoProjectedGradientDescent,
         BIM: BasicIterativeMethod,
         CW: CarliniLInfMethod,
+        DF: DeepFool,
         FGSM: FastGradientMethod,
         JSMA: SaliencyMapMethod,
-        PGD: ProjectedGradientDescent
+        NF: NewtonFool,
+        PGD: ProjectedGradientDescent,
+        SA: SquareAttack,
+        ST: SpatialTransformation
     }[attack_name]
 
 
@@ -159,8 +191,9 @@ def gen_adv_data(model, x, y, attack_name, dataset_name, batch_size=2048):
     classifier = KerasClassifier(model, **classifier_param)
     
     attack_param = attack_params[attack_name][dataset_name]
-    attack_param["batch_size"] = batch_size
-    if attack_name in [CW, PGD] : ## some attacks don't have verbose parameter, e.g. bim
+    if attack_name not in [ST] :
+        attack_param["batch_size"] = batch_size
+    if attack_name not in [FGSM, BIM] : ## some attacks don't have verbose parameter, e.g. bim
         attack_param["verbose"] = VERBOSE
     attack = call_function_by_attack_name(attack_name)(classifier, **attack_param)
     
@@ -224,11 +257,12 @@ if __name__ == '__main__':
     }
 
     # model_dict = {
-    #     CIFAR: ['vgg16'],
+    #     CIFAR: ['vgg16']
     # }
 
-    attack_names = ATTACK_NAMES
-    attack_names = [FGSM]
+    # attack_names = ATTACK_NAMES
+    attack_names = [BIM, CW, DF, FGSM, JSMA, NF, PGD, SA, ST]
+    # attack_names = [FGSM]
     # attack_names = [PGD]
     # attack_names = [BIM]
     # attack_names = [CW]
