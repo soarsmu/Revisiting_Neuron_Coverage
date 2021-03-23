@@ -31,6 +31,8 @@ from art.attacks.evasion import SaliencyMapMethod
 from art.attacks.evasion import AutoProjectedGradientDescent
 from art.attacks.evasion import DeepFool, NewtonFool
 from art.attacks.evasion import SquareAttack, SpatialTransformation
+from art.attacks.evasion import ShadowAttack, Wasserstein
+
 
 
 import tensorflow as tf
@@ -77,8 +79,10 @@ APGD = "apgd"
 DF = "deepfool"
 NF = "newtonfool"
 SA = "squareattack"
+SHA = "shadowattack"
 ST = "spatialtransformation"
-ATTACK_NAMES = [APGD, BIM, CW, DF, FGSM, JSMA, NF, PGD, SA, ST]
+WA = "wasserstein"
+ATTACK_NAMES = [APGD, BIM, CW, DF, FGSM, JSMA, NF, PGD, SA, SHA, ST, WA]
 ## Note:  already tried APGD, but it doesn't work
 
 
@@ -125,9 +129,17 @@ attack_params[SA] = {}
 for dataset_name in DATASET_NAMES:
     attack_params[SA][dataset_name] = {}
 
+attack_params[SHA] = {}
+for dataset_name in DATASET_NAMES:
+    attack_params[SHA][dataset_name] = {"batch_size": 1}
+
 attack_params[ST] = {}
 for dataset_name in DATASET_NAMES:
     attack_params[ST][dataset_name] = {}
+
+attack_params[WA] = {}
+for dataset_name in DATASET_NAMES:
+    attack_params[WA][dataset_name] = {}
 
 
 attack_params[PGD] = {}
@@ -179,7 +191,9 @@ def call_function_by_attack_name(attack_name):
         NF: NewtonFool,
         PGD: ProjectedGradientDescent,
         SA: SquareAttack,
-        ST: SpatialTransformation
+        SHA: ShadowAttack,
+        ST: SpatialTransformation,
+        WA: Wasserstein
     }[attack_name]
 
 
