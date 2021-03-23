@@ -1,3 +1,4 @@
+import argparse
 from util import get_data, get_model
 from tensorflow.python.client import device_lib
 from keras.preprocessing.image import ImageDataGenerator
@@ -161,78 +162,74 @@ def call_function_by_attack_name(attack_name):
         SHA: ShadowAttack
     }[attack_name]
 
+def adv_retrain(attack_name, dataset, model_name):
+    '''adversrial retrain model'''
+    x_train, y_train, x_test, y_test = load_data(dataset)
+
+    from keras.models import load_model
+    model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset, model_name)
+    model = load_model(model_path)
+    model.compile(
+        loss='categorical_crossentropy',
+        optimizer='adam',
+        metrics=['accuracy']
+    )
+
+    labels_true = np.argmax(y_test, axis=1)
+    labels_test = np.argmax(model.predict(x_test), axis=1)
+    print('Accuracy test set: %.2f%%' % (np.sum(labels_test == labels_true) / x_test.shape[0] * 100))
+
+    classifier = KerasClassifier(clip_values=(-0.5, 0.5), model=model, use_logits=False)
+    attack_param = attack_params[attack_name][dataset]
+    attack = call_function_by_attack_name(attack_name)(classifier, **attack_param)
+
+    x_test_pgd = attack.generate(x_test, y_test)
+
+    # Evaluate the benign trained model on adv test set
+    labels_pgd = np.argmax(classifier.predict(x_test_pgd), axis=1)
+    print('Accuracy on original ' + attack_name + ' adversarial samples: %.2f%%' %
+        (np.sum(labels_pgd == labels_true) / x_test.shape[0] * 100))
+
+    # Adversarial Training
+    trainer = AdversarialTrainer(classifier, attack, ratio=1.0)
+    trainer.fit(x_train, y_train, nb_epochs=160, batch_size=16)
+
+    # Save model
+    classifier.save(filename= 'adv_' + model_name + '_' + attack_name + '.h5', path="{}{}".format(MODEL_DIR, dataset))
+
+
+    # Evaluate the adversarially trained model on clean test set
+    labels_true = np.argmax(y_test, axis=1)
+    labels_test = np.argmax(classifier.predict(x_test), axis=1)
+    print('Accuracy test set: %.2f%%' % (np.sum(labels_test == labels_true) / x_test.shape[0] * 100))
+
+    # Evaluate the adversarially trained model on original adversarial samples
+    labels_pgd = np.argmax(classifier.predict(x_test_pgd), axis=1)
+    print('Accuracy on original ' + attack_name + ' adversarial samples: %.2f%%' %
+        (np.sum(labels_pgd == labels_true) / x_test.shape[0] * 100))
+
+    # Evaluate the adversarially trained model on fresh adversarial samples produced on the adversarially trained model
+    x_test_pgd = attack.generate(x_test, y_test)
+    labels_pgd = np.argmax(classifier.predict(x_test_pgd), axis=1)
+    print('Accuracy on new ' + attack_name + ' adversarial samples: %.2f%%' % (np.sum(labels_pgd == labels_true) / x_test.shape[0] * 100))
+
+
+
 if __name__ == "__main__":
-    datasets = ['cifar', 'mnist', 'svhn']
-    model_dict = {
-                'mnist': ['lenet1', 'lenet4', 'lenet5'],
-                'cifar': ['vgg16', 'resnet20'],
-                'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
-                }
+    parser = argparse.ArgumentParser(description='Adversarially retrain model')
+    parser.add_argument('-dataset', help="dataset to use", choices=['mnist', 'cifar', 'svhn'])
+    parser.add_argument('-model', help="target model to attack",
+                        choices=['vgg16', 'resnet20', 'lenet1', 'lenet4', 'lenet5', 'svhn_model',
+                                 'svhn_first', 'svhn_second'])
+    parser.add_argument('-attack', help="dataset to use")
+    args = parser.parse_args()
 
-    # Check path
-    for dataset_name in model_dict.keys():
-        # verify data path
-        check_data_path(dataset_name)
-        # verify model path
-        for model_name in model_dict[dataset_name]:
-            model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
-            assert os.path.exists(model_path)
+    attack_name = args.attack
+    dataset = args.dataset
+    model_name = args.model
 
-    attack_names = [PGD, FGSM, BIM]
-    for attack_name in attack_names:
-        for dataset in datasets:
-            for model_name in model_dict[dataset]:
-                x_train, y_train, x_test, y_test = load_data(dataset)
+    adv_retrain(attack_name, dataset, model_name)
 
-                from keras.models import load_model
-                model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset, model_name)
-                model = load_model(model_path)
-                model.compile(
-                    loss='categorical_crossentropy',
-                    optimizer='adam',
-                    metrics=['accuracy']
-                )
-
-                model.summary()
-
-                # Evaluate the benign trained model on clean test set
-                labels_true = np.argmax(y_test, axis=1)
-                labels_test = np.argmax(model.predict(x_test), axis=1)
-                print('Accuracy test set: %.2f%%' % (np.sum(labels_test == labels_true) / x_test.shape[0] * 100))
-
-                classifier = KerasClassifier(clip_values=(-0.5, 0.5), model=model, use_logits=False)
-                attack_param = attack_params[attack_name][dataset]
-                attack = call_function_by_attack_name(attack_name)(classifier, **attack_param)
-
-                x_test_pgd = attack.generate(x_test, y_test)
-
-                # Evaluate the benign trained model on adv test set
-                labels_pgd = np.argmax(classifier.predict(x_test_pgd), axis=1)
-                print('Accuracy on original ' + attack_name + ' adversarial samples: %.2f%%' %
-                    (np.sum(labels_pgd == labels_true) / x_test.shape[0] * 100))
-
-                # Adversarial Training
-                trainer = AdversarialTrainer(classifier, attack, ratio=1.0)
-                trainer.fit(x_train, y_train, nb_epochs=160, batch_size=512)
-
-                # Save model
-                classifier.save(filename= 'adv_' + model_name + '_' + attack_name + '.h5', path="{}{}".format(MODEL_DIR, dataset))
-
-
-                # Evaluate the adversarially trained model on clean test set
-                labels_true = np.argmax(y_test, axis=1)
-                labels_test = np.argmax(classifier.predict(x_test), axis=1)
-                print('Accuracy test set: %.2f%%' % (np.sum(labels_test == labels_true) / x_test.shape[0] * 100))
-
-                # Evaluate the adversarially trained model on original adversarial samples
-                labels_pgd = np.argmax(classifier.predict(x_test_pgd), axis=1)
-                print('Accuracy on original ' + attack_name + ' adversarial samples: %.2f%%' %
-                    (np.sum(labels_pgd == labels_true) / x_test.shape[0] * 100))
-
-                # Evaluate the adversarially trained model on fresh adversarial samples produced on the adversarially trained model
-                x_test_pgd = attack.generate(x_test, y_test)
-                labels_pgd = np.argmax(classifier.predict(x_test_pgd), axis=1)
-                print('Accuracy on new ' + attack_name + ' adversarial samples: %.2f%%' % (np.sum(labels_pgd == labels_true) / x_test.shape[0] * 100))
 
 
 
