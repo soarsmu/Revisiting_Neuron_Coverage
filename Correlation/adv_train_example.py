@@ -4,11 +4,11 @@ from keras.preprocessing.image import ImageDataGenerator
 from art.data_generators import KerasDataGenerator
 
 from art.classifiers import KerasClassifier
-from art.attacks import ProjectedGradientDescent
-from art.attacks import BasicIterativeMethod
-from art.defences import AdversarialTrainer
-from art.attacks import CarliniL2Method
-from art.attacks import FastGradientMethod
+from art.attacks.evasion import ProjectedGradientDescent
+from art.attacks.evasion import BasicIterativeMethod
+from art.defences.trainer import AdversarialTrainer
+# from art.attacks import CarliniL2Method
+from art.attacks.evasion import FastGradientMethod
 
 import numpy as np
 import tensorflow as tf
@@ -65,7 +65,7 @@ if __name__ == "__main__":
             model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
             assert os.path.exists(model_path)
 
-    attack_names = ['PGD']
+    attack_names = ['FGSM']
     for attack_name in attack_names:
         for dataset in datasets:
             for model_name in model_dict[dataset]:
@@ -88,7 +88,7 @@ if __name__ == "__main__":
                 print('Accuracy test set: %.2f%%' % (np.sum(labels_test == labels_true) / x_test.shape[0] * 100))
 
                 classifier = KerasClassifier(clip_values=(-0.5, 0.5), model=model, use_logits=False)
-                attack = call_function_by_attack_name(attack_name)(classifier, eps=8/255, eps_step=1/255, max_iter=20, batch_size=512)
+                attack = call_function_by_attack_name(attack_name)(classifier, eps=0.2, batch_size=512)
 
                 x_test_pgd = attack.generate(x_test, y_test)
 
@@ -102,7 +102,8 @@ if __name__ == "__main__":
                 trainer.fit(x_train, y_train, nb_epochs=160, batch_size=1024)
 
                 # Save model
-                classifier.save(filename= 'adv_' + model_name + '_' + attack_name + '.h5', path="{}{}".format(MODEL_DIR, dataset_name))
+                classifier.save(filename= 'adv_' + model_name + '_' + attack_name + '.h5', path="{}{}".format(MODEL_DIR, dataset))
+
 
                 # Evaluate the adversarially trained model on clean test set
                 labels_true = np.argmax(y_test, axis=1)
