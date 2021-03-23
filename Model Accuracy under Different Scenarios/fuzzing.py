@@ -9,6 +9,11 @@ from keras import backend as K
 
 import tensorflow as tf
 import os
+
+DATA_DIR = "../data/"
+MODEL_DIR = "../models/"
+
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 ####for solving some specific problems, don't care
@@ -286,14 +291,20 @@ def mutate(img, dataset):
     return img_new
 
 # the data is in range(-.5, .5)
-def load_data(name):
-    assert (name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
-    name = name.lower()
-    x_train = np.load('./data/' + name + '_data/' + name + '_x_train.npy')
-    y_train = np.load('./data/' + name + '_data/' + name + '_y_train.npy')
-    x_test = np.load('./data/' + name + '_data/' + name + '_x_test.npy')
-    y_test = np.load('./data/' + name + '_data/' + name + '_y_test.npy')
+def load_data(dataset_name):
+    assert (dataset_name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
+    dataset_name = dataset_name.lower()
+    x_train = np.load(DATA_DIR + dataset_name + '/benign/x_train.npy')
+    y_train = np.load(DATA_DIR + dataset_name + '/benign/y_train.npy')
+    x_test = np.load(DATA_DIR + dataset_name + '/benign/x_test.npy')
+    y_test = np.load(DATA_DIR + dataset_name + '/benign/y_test.npy')
     return x_train, y_train, x_test, y_test
+
+def check_data_path(dataset_name):
+    assert os.path.exists(DATA_DIR + dataset_name + '/benign/x_train.npy')
+    assert os.path.exists(DATA_DIR + dataset_name + '/benign/y_train.npy')
+    assert os.path.exists(DATA_DIR + dataset_name + '/benign/x_test.npy')
+    assert os.path.exists(DATA_DIR + dataset_name + '/benign/y_test.npy')
 
 def softmax(x):
     exp_x = np.exp(x)
@@ -316,24 +327,30 @@ def compare_nc(x_new, x_old, layer):
 
 
 if __name__ == '__main__':
-    # dataset = 'mnist'
-    # model_name = 'lenet1'
-    # model_layer = 8
 
     datasets = ['mnist', 'cifar', 'svhn']
     model_dict = {
                 'mnist': ['lenet1', 'lenet4', 'lenet5'],
-                'cifar': ['vgg16', 'resnet20'],
+                'cifar': ['vgg16'], # 'resnet20' has error, related to layer.
                 'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
                 }
 
+    # Check path
+    for dataset_name in model_dict.keys():
+        # verify data path
+        check_data_path(dataset_name)
+        # verify model path
+        for model_name in model_dict[dataset_name]:
+            model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
+            assert os.path.exists(model_path)
 
     from keras.models import load_model
 
     for dataset in datasets:
         for model_name in model_dict[dataset]:
             # load original model
-            model = load_model('./data/' + dataset + '_data/model/' + model_name + '.h5')
+            model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset, model_name)
+            model = load_model(model_path)
             # get model layer
             model_layer = len(model.layers) - 1
 

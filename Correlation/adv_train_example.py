@@ -14,7 +14,9 @@ import numpy as np
 import tensorflow as tf
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+DATA_DIR = "../data/"
+MODEL_DIR = "../models/"
 
 ####for solving some specific problems, don't care
 config = tf.ConfigProto()
@@ -22,32 +24,32 @@ config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
 
 # the data is in range(-.5, .5)
-def load_data(name):
-    assert (name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
-    name = name.lower()
-    x_train = np.load('../data/' + name + '_data/' + name + '_x_train.npy')
-    y_train = np.load('../data/' + name + '_data/' + name + '_y_train.npy')
-    x_test = np.load('../data/' + name + '_data/' + name + '_x_test.npy')
-    y_test = np.load('../data/' + name + '_data/' + name + '_y_test.npy')
+def load_data(dataset_name):
+    assert (dataset_name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
+    dataset_name = dataset_name.lower()
+    x_train = np.load(DATA_DIR + dataset_name + '/benign/x_train.npy')
+    y_train = np.load(DATA_DIR + dataset_name + '/benign/y_train.npy')
+    x_test = np.load(DATA_DIR + dataset_name + '/benign/x_test.npy')
+    y_test = np.load(DATA_DIR + dataset_name + '/benign/y_test.npy')
     return x_train, y_train, x_test, y_test
 
 
-def check_data_path(name):
-    assert os.path.exists('../data/' + name + '_data/' + name + '_x_train.npy')
-    assert os.path.exists('../data/' + name + '_data/' + name + '_y_train.npy')
-    assert os.path.exists('../data/' + name + '_data/' + name + '_x_test.npy')
-    assert os.path.exists('../data/' + name + '_data/' + name + '_y_test.npy')
+def check_data_path(dataset_name):
+    assert os.path.exists(DATA_DIR + dataset_name + '/benign/x_train.npy')
+    assert os.path.exists(DATA_DIR + dataset_name + '/benign/y_train.npy')
+    assert os.path.exists(DATA_DIR + dataset_name + '/benign/x_test.npy')
+    assert os.path.exists(DATA_DIR + dataset_name + '/benign/y_test.npy')
 
 
 def call_function_by_attack_name(attack_name):
 
     return {
-        'FGSM': FastGradientMethod,
-        'GPD': ProjectedGradientDescent # eps=8/255, eps_step=1/255, max_iter=20, batch_size=512)
+        'FGSM': FastGradientMethod, # eps=0.2, batch_size=512
+        'PGD': ProjectedGradientDescent # eps=8/255, eps_step=1/255, max_iter=20, batch_size=512)
     }[attack_name]
 
 if __name__ == "__main__":
-    datasets = ['svhn', 'mnist', 'cifar']
+    datasets = ['mnist', 'svhn', 'cifar']
     model_dict = {
                 'mnist': ['lenet1', 'lenet4', 'lenet5'],
                 'cifar': ['vgg16', 'resnet20'],
@@ -55,22 +57,23 @@ if __name__ == "__main__":
                 }
 
     # Check path
-    for dataset in model_dict.keys():
+    for dataset_name in model_dict.keys():
         # verify data path
-        check_data_path(dataset)
+        check_data_path(dataset_name)
         # verify model path
-        for model_name in model_dict[dataset]:
-            assert os.path.exists('../data/' + dataset + '_data/model/' + model_name + '.h5')
+        for model_name in model_dict[dataset_name]:
+            model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
+            assert os.path.exists(model_path)
 
-
-    attack_names = ['FGSM']
+    attack_names = ['PGD']
     for attack_name in attack_names:
         for dataset in datasets:
             for model_name in model_dict[dataset]:
                 x_train, y_train, x_test, y_test = load_data(dataset)
 
                 from keras.models import load_model
-                model = load_model('../data/' + dataset + '_data/model/' + model_name + '.h5')
+                model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset, model_name)
+                model = load_model(model_path)
                 model.compile(
                     loss='categorical_crossentropy',
                     optimizer='adam',
@@ -85,7 +88,7 @@ if __name__ == "__main__":
                 print('Accuracy test set: %.2f%%' % (np.sum(labels_test == labels_true) / x_test.shape[0] * 100))
 
                 classifier = KerasClassifier(clip_values=(-0.5, 0.5), model=model, use_logits=False)
-                attack = call_function_by_attack_name(attack_name)(classifier, eps=8/255, batch_size=512)
+                attack = call_function_by_attack_name(attack_name)(classifier, eps=8/255, eps_step=1/255, max_iter=20, batch_size=512)
 
                 x_test_pgd = attack.generate(x_test, y_test)
 
@@ -96,9 +99,10 @@ if __name__ == "__main__":
 
                 # Adversarial Training
                 trainer = AdversarialTrainer(classifier, attack, ratio=1.0)
-                trainer.fit(x_train, y_train, nb_epochs=60, batch_size=1024)
+                trainer.fit(x_train, y_train, nb_epochs=160, batch_size=1024)
 
-                classifier.save(filename= attack_name + '_adv_' + model_name + '.h5', path='../data/' + dataset + '_data/model/')
+                # Save model
+                classifier.save(filename= 'adv_' + model_name + '_' + attack_name + '.h5', path="{}{}".format(MODEL_DIR, dataset_name))
 
                 # Evaluate the adversarially trained model on clean test set
                 labels_true = np.argmax(y_test, axis=1)

@@ -17,6 +17,10 @@ from util import get_model
 import tensorflow as tf
 import os
 
+
+DATA_DIR = "../data/"
+MODEL_DIR = "../models/"
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 ####for solving some specific problems, don't care
@@ -25,13 +29,13 @@ config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
 
 # the data is in range(-.5, .5)
-def load_data(name):
-    assert (name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
-    name = name.lower()
-    x_train = np.load('./data/' + name + '_data/' + name + '_x_train.npy')
-    y_train = np.load('./data/' + name + '_data/' + name + '_y_train.npy')
-    x_test = np.load('./data/' + name + '_data/' + name + '_x_test.npy')
-    y_test = np.load('./data/' + name + '_data/' + name + '_y_test.npy')
+def load_data(dataset_name):
+    assert (dataset_name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
+    dataset_name = dataset_name.lower()
+    x_train = np.load(DATA_DIR + dataset_name + '/benign/x_train.npy')
+    y_train = np.load(DATA_DIR + dataset_name + '/benign/y_train.npy')
+    x_test = np.load(DATA_DIR + dataset_name + '/benign/x_test.npy')
+    y_test = np.load(DATA_DIR + dataset_name + '/benign/y_test.npy')
     return x_train, y_train, x_test, y_test
 
 def retrain(model, X_train, Y_train, X_test, Y_test, batch_size=128, epochs=50):
@@ -371,7 +375,7 @@ if __name__ == '__main__':
     datasets = ['mnist', 'cifar', 'svhn']
     model_dict = {
                 'mnist': ['lenet1', 'lenet4', 'lenet5'],
-                'cifar': ['vgg16', 'resnet20'],
+                'cifar': ['vgg16'], # , 'resnet20'
                 'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
                 }
     
@@ -379,14 +383,11 @@ if __name__ == '__main__':
     for dataset in datasets:
         for model_name in model_dict[dataset]:
             x_train, y_train, x_test, y_test = load_data(dataset)
-
-
             # ## load mine trained model
-
-
-            model = load_model('./data/' + dataset + '_data/model/' + model_name + '.h5')
+            model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset, model_name)
+            model = load_model(model_path)
             model.summary()
-
+            continue
             index = np.load('fuzzing/' + dataset + '_' + model_name +  '/nc_index_{}.npy'.format(4), allow_pickle=True).item()
             for y, x in index.items():
                 x_train = np.concatenate((x_train, np.expand_dims(x, axis=0)), axis=0)
