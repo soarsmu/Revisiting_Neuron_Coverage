@@ -64,8 +64,6 @@ if __name__ == "__main__":
         for model_name in model_dict[dataset_name]:
             model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
             assert os.path.exists(model_path)
-            # assert os.path.exists('../data/' + dataset + '_data/model/' + model_name + '.h5')
-    exit()
 
     attack_names = ['PGD']
     for attack_name in attack_names:
@@ -74,7 +72,8 @@ if __name__ == "__main__":
                 x_train, y_train, x_test, y_test = load_data(dataset)
 
                 from keras.models import load_model
-                model = load_model('../data/' + dataset + '_data/model/' + model_name + '.h5')
+                model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset, model_name)
+                model = load_model(model_path)
                 model.compile(
                     loss='categorical_crossentropy',
                     optimizer='adam',
@@ -102,12 +101,8 @@ if __name__ == "__main__":
                 trainer = AdversarialTrainer(classifier, attack, ratio=1.0)
                 trainer.fit(x_train, y_train, nb_epochs=160, batch_size=1024)
 
-                classifier.save(filename= attack_name + '_adv_' + model_name + '.h5', path='../data/' + dataset + '_data/model/')
-                path = '../data/' + dataset + '_data/model/' + attack_name + '_adv_' + model_name + '.h5'
-                new_path = '../\'Model Accuracy under Different Scenarios\'/data/' + dataset + '_data/model/' + attack_name + '_adv_' + model_name + '.h5'
-                # move model to RQ3 folders
-                os.system('mv ' + path + ' ' + new_path)
-
+                # Save model
+                classifier.save(filename= 'adv_' + model_name + '_' + attack_name + '.h5', path="{}{}".format(MODEL_DIR, dataset_name))
 
                 # Evaluate the adversarially trained model on clean test set
                 labels_true = np.argmax(y_test, axis=1)
