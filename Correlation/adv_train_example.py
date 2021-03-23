@@ -57,13 +57,15 @@ if __name__ == "__main__":
                 }
 
     # Check path
-    for dataset in model_dict.keys():
+    for dataset_name in model_dict.keys():
         # verify data path
-        check_data_path(dataset)
+        check_data_path(dataset_name)
         # verify model path
-        for model_name in model_dict[dataset]:
-            assert os.path.exists('../data/' + dataset + '_data/model/' + model_name + '.h5')
-
+        for model_name in model_dict[dataset_name]:
+            model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
+            assert os.path.exists(model_path)
+            # assert os.path.exists('../data/' + dataset + '_data/model/' + model_name + '.h5')
+    exit()
 
     attack_names = ['PGD']
     for attack_name in attack_names:
