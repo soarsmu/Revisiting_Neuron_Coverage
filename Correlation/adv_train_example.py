@@ -24,7 +24,7 @@ config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
 
 # the data is in range(-.5, .5)
-def load_data(name):
+def load_data(dataset_name):
     assert (dataset_name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
     dataset_name = dataset_name.lower()
     x_train = np.load(DATA_DIR + dataset_name + '/benign/x_train.npy')
@@ -34,7 +34,7 @@ def load_data(name):
     return x_train, y_train, x_test, y_test
 
 
-def check_data_path(name):
+def check_data_path(dataset_name):
     assert os.path.exists(DATA_DIR + dataset_name + '/benign/x_train.npy')
     assert os.path.exists(DATA_DIR + dataset_name + '/benign/y_train.npy')
     assert os.path.exists(DATA_DIR + dataset_name + '/benign/x_test.npy')
