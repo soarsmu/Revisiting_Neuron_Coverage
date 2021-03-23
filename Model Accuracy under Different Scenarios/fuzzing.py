@@ -349,7 +349,8 @@ if __name__ == '__main__':
     for dataset in datasets:
         for model_name in model_dict[dataset]:
             # load original model
-            model = load_model('./data/' + dataset + '_data/model/' + model_name + '.h5')
+            model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset, model_name)
+            model = load_model(model_path)
             # get model layer
             model_layer = len(model.layers) - 1
 
