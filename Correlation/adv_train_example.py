@@ -15,6 +15,9 @@ import tensorflow as tf
 import os
 
 
+DATA_DIR = "../data/"
+MODEL_DIR = "../models/"
+
 ####for solving some specific problems, don't care
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -22,20 +25,20 @@ sess = tf.Session(config=config)
 
 # the data is in range(-.5, .5)
 def load_data(name):
-    assert (name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
-    name = name.lower()
-    x_train = np.load('../data/' + name + '_data/' + name + '_x_train.npy')
-    y_train = np.load('../data/' + name + '_data/' + name + '_y_train.npy')
-    x_test = np.load('../data/' + name + '_data/' + name + '_x_test.npy')
-    y_test = np.load('../data/' + name + '_data/' + name + '_y_test.npy')
+    assert (dataset_name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
+    dataset_name = dataset_name.lower()
+    x_train = np.load(DATA_DIR + dataset_name + '/benign/x_train.npy')
+    y_train = np.load(DATA_DIR + dataset_name + '/benign/y_train.npy')
+    x_test = np.load(DATA_DIR + dataset_name + '/benign/x_test.npy')
+    y_test = np.load(DATA_DIR + dataset_name + '/benign/y_test.npy')
     return x_train, y_train, x_test, y_test
 
 
 def check_data_path(name):
-    assert os.path.exists('../data/' + name + '_data/' + name + '_x_train.npy')
-    assert os.path.exists('../data/' + name + '_data/' + name + '_y_train.npy')
-    assert os.path.exists('../data/' + name + '_data/' + name + '_x_test.npy')
-    assert os.path.exists('../data/' + name + '_data/' + name + '_y_test.npy')
+    assert os.path.exists(DATA_DIR + dataset_name + '/benign/x_train.npy')
+    assert os.path.exists(DATA_DIR + dataset_name + '/benign/y_train.npy')
+    assert os.path.exists(DATA_DIR + dataset_name + '/benign/x_test.npy')
+    assert os.path.exists(DATA_DIR + dataset_name + '/benign/y_test.npy')
 
 
 def call_function_by_attack_name(attack_name):
