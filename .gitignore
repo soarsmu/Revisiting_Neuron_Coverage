@@ -10,3 +10,4 @@ Model Accuracy under Different Scenarios/fuzzing/*
 
 data/
 models/
+coverage/
