@@ -288,13 +288,12 @@ def mutate(img, dataset):
     return img_new
 
 # the data is in range(-.5, .5)
-def load_data(name):
-    assert (name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
-    name = name.lower()
-    x_train = np.load('./data/' + name + '_data/' + name + '_x_train.npy')
-    y_train = np.load('./data/' + name + '_data/' + name + '_y_train.npy')
-    x_test = np.load('./data/' + name + '_data/' + name + '_x_test.npy')
-    y_test = np.load('./data/' + name + '_data/' + name + '_y_test.npy')
+def load_data(dataset_name):
+    assert dataset_name in DATASET_NAMES
+    x_train = np.load(DATA_DIR + dataset_name + '/benign/x_train.npy')
+    y_train = np.load(DATA_DIR + dataset_name + '/benign/y_train.npy')
+    x_test = np.load(DATA_DIR + dataset_name + '/benign/x_test.npy')
+    y_test = np.load(DATA_DIR + dataset_name + '/benign/y_test.npy')
     return x_train, y_train, x_test, y_test
 
 
@@ -315,8 +314,9 @@ if __name__ == '__main__':
 
             # import model
             from keras.models import load_model
-            # why attack the original model?
-            model = load_model('./data/' + dataset + '_data/model/' + model_name + '.h5')
+
+            model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset, model_name)
+             model = load_model(model_path)
             model.summary()
 
 
