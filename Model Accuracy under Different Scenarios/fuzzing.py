@@ -300,6 +300,12 @@ def load_data(dataset_name):
     y_test = np.load(DATA_DIR + dataset_name + '/benign/y_test.npy')
     return x_train, y_train, x_test, y_test
 
+def check_data_path(dataset_name):
+    assert os.path.exists(DATA_DIR + dataset_name + '/benign/x_train.npy')
+    assert os.path.exists(DATA_DIR + dataset_name + '/benign/y_train.npy')
+    assert os.path.exists(DATA_DIR + dataset_name + '/benign/x_test.npy')
+    assert os.path.exists(DATA_DIR + dataset_name + '/benign/y_test.npy')
+
 def softmax(x):
     exp_x = np.exp(x)
     return exp_x / np.sum(exp_x)
@@ -329,6 +335,14 @@ if __name__ == '__main__':
                 'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
                 }
 
+    # Check path
+    for dataset_name in model_dict.keys():
+        # verify data path
+        check_data_path(dataset_name)
+        # verify model path
+        for model_name in model_dict[dataset_name]:
+            model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
+            assert os.path.exists(model_path)
 
     from keras.models import load_model
 
