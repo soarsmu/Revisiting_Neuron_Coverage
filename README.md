@@ -4,33 +4,16 @@
 
 Codes for paper: Correlations Between Deep Neural Network Model Coverage Criteria and Model Quality
 
-## Dependencies:
 
-Code has been tested on:
-
-* Python 3.6, 3.7
-* OS: Ubuntu 18.04
-
-### Docker
-
-We have prepared a docker which contains all deps:
-
-```python
-# Get the environment (OS) to run the code
-$ docker pull hao359510974/covtesting2:latest
-$ docker run -it --mount type=bind,src=SRC_PATH,dst=DEST_PATH hao359510974/covtesting2:latest # Where SRC_PATH and DEST_PATH must be absolute paths; SRC_PATH is the path on your host machine, and DEST_PATH is the file path for where you want it to be stored in the Docker, such as '/data'.
-    
-# Experiments (take Comparison of Attack Images (Table 2) as an example, for other experiments just use other folders.)
-$ cd /data/Comparison\ of\ Attack\ Images/
-
-# Then run commands according to 'README' file to get corresponding results. 
+## Run on TensorFlow2
+### Docker 
+```bash
+docker pull tensorflow/tensorflow:latest-gpu
 ```
-
-### Pip
-
-We also provide [requirements.txt](https://github.com/DNNTesting/CovTesting/blob/master/requirements.txt) file for users who want to establish the environment on their own machine:
-
-```$ pip install -r requirements.txt```
+run docker then
+```bash
+bash latest-install.sh
+```
 
 ## Repo Structure:
 

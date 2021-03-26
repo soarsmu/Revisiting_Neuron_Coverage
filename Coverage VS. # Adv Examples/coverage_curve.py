@@ -4,18 +4,64 @@ import random
 import shutil
 import warnings
 import sys
-warnings.filterwarnings("ignore")
+
+import logging
+import time
+from datetime import datetime
+import pytz
+import numpy as np
+
+import warnings
+warnings.filterwarnings("ignore", message=r"Passing", category=FutureWarning)
 
 from keras import backend as K
 import numpy as np
 from PIL import Image, ImageFilter
 from skimage.measure import compare_ssim as SSIM
 import keras
+from keras.models import load_model
+
 from util import get_model
 
 import tensorflow as tf
 import os
+
+## custom time zone for logger
+def customTime(*args):
+    utc_dt = pytz.utc.localize(datetime.utcnow())
+    converted = utc_dt.astimezone(pytz.timezone("Singapore"))
+    return converted.timetuple()
+
+logging.Formatter.converter = customTime
+logger = logging.getLogger("coverage_criteria")
+
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+VERBOSE = False
+
+DATA_DIR = "../data/"
+MODEL_DIR = "../models/"
+RESULT_DIR = "../coverage/"
+
+MNIST = "mnist"
+CIFAR = "cifar"
+SVHN = "svhn"
+
+DATASET_NAMES = [MNIST, CIFAR, SVHN]
+
+BIM = "bim"
+CW = "cw"
+FGSM = "fgsm"
+JSMA = "jsma"
+PGD = "pgd"
+APGD = "apgd"
+DF = "deepfool"
+NF = "newtonfool"
+SA = "squareattack"
+ST = "spatialtransformation"
+ATTACK_NAMES = [APGD, BIM, CW, DF, FGSM, JSMA, NF, PGD, SA, ST]
+
 
 ####for solving some specific problems, don't care
 config = tf.ConfigProto()
@@ -32,13 +78,12 @@ def get_layer_i_output(model, i, data):
     return ret
 
 # the data is in range(-.5, .5)
-def load_data(name):
-    assert (name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
-    name = name.lower()
-    x_train = np.load('../data/' + name + '_data/' + name + '_x_train.npy')
-    y_train = np.load('../data/' + name + '_data/' + name + '_y_train.npy')
-    x_test = np.load('../data/' + name + '_data/' + name + '_x_test.npy')
-    y_test = np.load('../data/' + name + '_data/' + name + '_y_test.npy')
+def load_data(dataset_name):
+    assert dataset_name in DATASET_NAMES
+    x_train = np.load(DATA_DIR + dataset_name + '/benign/x_train.npy')
+    y_train = np.load(DATA_DIR + dataset_name + '/benign/y_train.npy')
+    x_test = np.load(DATA_DIR + dataset_name + '/benign/x_test.npy')
+    y_test = np.load(DATA_DIR + dataset_name + '/benign/y_test.npy')
     return x_train, y_train, x_test, y_test
 
 
@@ -95,7 +140,7 @@ class Coverage:
                 end += batch
                 buckets[col_max > threshold] = True
             activate_num += np.sum(buckets)
-        # print('NC:\t{:.3f} activate_num:\t{} neuron_num:\t{}'.format(activate_num / neuron_num, activate_num, neuron_num))
+        # logger.info('NC:\t{:.3f} activate_num:\t{} neuron_num:\t{}'.format(activate_num / neuron_num, activate_num, neuron_num))
         return activate_num / neuron_num, activate_num, neuron_num
 
     #2 k-multisection neuron coverage, neuron boundary coverage and strong activation neuron coverage
@@ -111,7 +156,7 @@ class Coverage:
         u_covered_num = 0
         for i in layers:
             neurons = np.prod(self.model.layers[i].output.shape[1:])
-            print(neurons)
+            logger.info(neurons)
             begin, end = 0, batch
             data_num = self.x_train.shape[0]
             
@@ -127,7 +172,7 @@ class Coverage:
                 end += batch
             buckets = np.zeros((neurons, k + 2)).astype('bool')
             interval = (neuron_max - neuron_min) / k
-            # print(interval[8], neuron_max[8], neuron_min[8])
+            # logger.info(interval[8], neuron_max[8], neuron_min[8])
             begin, end = 0, batch
             data_num = self.x_adv.shape[0]
             while begin < data_num:
@@ -141,16 +186,16 @@ class Coverage:
                 layer_output_adv = layer_output_adv + 1
                 for j in range(neurons):
                     uniq = np.unique(layer_output_adv[:, j])
-                    # print(layer_output_adv[:, j])
+                    # logger.info(layer_output_adv[:, j])
                     buckets[j, uniq] = True
                 begin += batch
                 end += batch
             covered_num += np.sum(buckets[:,1:-1])
             u_covered_num += np.sum(buckets[:, -1])
             l_covered_num += np.sum(buckets[:, 0])
-        print('KMNC:\t{:.3f} covered_num:\t{}'.format(covered_num / (neuron_num * k), covered_num))
-        print('NBC:\t{:.3f} l_covered_num:\t{}'.format((l_covered_num + u_covered_num) / (neuron_num * 2), l_covered_num))
-        print('SNAC:\t{:.3f} u_covered_num:\t{}'.format(u_covered_num / neuron_num, u_covered_num))
+        logger.info('KMNC:\t{:.3f} covered_num:\t{}'.format(covered_num / (neuron_num * k), covered_num))
+        logger.info('NBC:\t{:.3f} l_covered_num:\t{}'.format((l_covered_num + u_covered_num) / (neuron_num * 2), l_covered_num))
+        logger.info('SNAC:\t{:.3f} u_covered_num:\t{}'.format(u_covered_num / neuron_num, u_covered_num))
         return covered_num / (neuron_num * k), (l_covered_num + u_covered_num) / (neuron_num * 2), u_covered_num / neuron_num, covered_num, l_covered_num, u_covered_num, neuron_num*k
 
     #3 top-k neuron coverage
@@ -182,7 +227,7 @@ class Coverage:
                 begin += batch
                 end += batch
             pattern_num += len(pattern_set)
-        print('TKNC:\t{:.3f} pattern_num:\t{} neuron_num:\t{}'.format(pattern_num / neuron_num, pattern_num, neuron_num))
+        logger.info('TKNC:\t{:.3f} pattern_num:\t{} neuron_num:\t{}'.format(pattern_num / neuron_num, pattern_num, neuron_num))
         return pattern_num / neuron_num, pattern_num, neuron_num
 
     #4 top-k neuron patterns 
@@ -218,7 +263,7 @@ class Coverage:
         for i in range(patterns.shape[0]):
             pattern_set.add(to_tuple(patterns[i]))
         pattern_num = len(pattern_set)
-        print('TKNP:\t{:.3f}'.format(pattern_num))
+        logger.info('TKNP:\t{:.3f}'.format(pattern_num))
         return pattern_num
     
     def all(self, layers, batch=100):
@@ -227,21 +272,52 @@ class Coverage:
         self.TKNC(layers, batch=batch)
         self.TKNP(layers, batch=batch)
 
-
 if __name__ == '__main__':
-    dataset = 'mnist'
-    model_name = 'lenet1'
-    attack = 'PGD'
+    
+    parser = argparse.ArgumentParser(description='Attack for DNN')
+    parser.add_argument(
+        '--dataset', help="Model Architecture", type=str, default="mnist")
+    parser.add_argument(
+        '--model', help="Model Architecture", type=str, default="lenet1")
+    parser.add_argument(
+        '--attack', help="Adversarial examples", type=str, default="fgsm")
+    
+    args = parser.parse_args()
 
-    # load dataset
-    x_train, y_train, x_test, y_test = load_data(dataset)
+    dataset_name = args.dataset
+    model_name = args.model
+    attack_name = args.attack
 
-    # import model
-    from keras.models import load_model
-    model = load_model('../data/' + dataset + '_data/model/' + model_name + '.h5')
+    ## Prepare directory for loading adversarial images and logging
+    adv_dir = "{}{}/adv/{}/{}/".format(
+        DATA_DIR, dataset_name, model_name, attack_name)
+    cov_dir = "{}{}/adv/{}/{}/".format(
+        RESULT_DIR, dataset_name, model_name, attack_name)
+    
+    if not os.path.exists(cov_dir):
+            os.makedirs(cov_dir)
+
+    logging.basicConfig(
+        format='[%(asctime)s] - %(message)s',
+        datefmt='%Y/%m/%d %H:%M:%S',
+        level=logging.INFO,
+        handlers=[
+            logging.FileHandler(
+                os.path.join(cov_dir, 'output.log')),
+            logging.StreamHandler()
+        ])
+
+    ## Load benign images from mnist, cifar, or svhn
+    x_train, y_train, x_test, y_test = load_data(dataset_name)
+
+    ## Load keras pretrained model for the specific dataset
+    model_path = "{}{}/{}.h5".format(MODEL_DIR,
+                                    dataset_name, model_name)
+    model = load_model(model_path)
     model.summary()
 
-    x_adv = np.load('../data/' + dataset + '_data/model/' + model_name + '_' + attack + '.npy')
+    x_adv_path = "{}x_test.npy".format(adv_dir)
+    x_adv = np.load(x_adv_path)
 
     l = [0, 8]
 
@@ -254,18 +330,19 @@ if __name__ == '__main__':
     cov_tknc = []
     cov_tknp = []
 
-    for i in range(1, len(x_adv), 200):
-        if i == 1000 or i == 3000 or i == 5000 or i == 7000 or i == 9000:
-            print(i)
+    cov_result_path = os.path.join(cov_dir, "coverage_result.txt")
+    with open(cov_result_path, "w+") as f:
+        for i in range(1, len(x_adv), 200):
+            if i == 1000 or i == 3000 or i == 5000 or i == 7000 or i == 9000:
+                logger.info(i)
 
-        coverage = Coverage(model, x_train, y_train, x_test, y_test, x_adv[:i])
-        nc1, _, _ = coverage.NC(l, threshold=0.3)
-        nc2, _, _ = coverage.NC(l, threshold=0.5)
-        kmnc, nbc, snac, _, _, _, _ = coverage.KMNC(l)
-        tknc, _, _ = coverage.TKNC(l)
-        tknp = coverage.TKNP(l)
+            coverage = Coverage(model, x_train, y_train, x_test, y_test, x_adv[:i])
+            nc1, _, _ = coverage.NC(l, threshold=0.3)
+            nc2, _, _ = coverage.NC(l, threshold=0.5)
+            kmnc, nbc, snac, _, _, _, _ = coverage.KMNC(l)
+            tknc, _, _ = coverage.TKNC(l)
+            tknp = coverage.TKNP(l)
 
-        with open("coverage_result.txt", "a") as f:
             f.write("\n------------------------------------------------------------------------------\n")
             f.write('x: {}   \n'.format(i))
             f.write('NC(0.1): {}   \n'.format(nc1))
@@ -276,24 +353,24 @@ if __name__ == '__main__':
             f.write('NBC: {}  \n'.format(nbc))
             f.write('SNAC: {} \n'.format(snac))
 
-        xlabel.append(i)
-        cov_nc1.append(nc1)
-        cov_nc2.append(nc2)
-        cov_kmnc.append(kmnc)
-        cov_nbc.append(nbc)
-        cov_snac.append(snac)
-        cov_tknc.append(tknc)
-        cov_tknp.append(tknp)
-        print(xlabel)
+            xlabel.append(i)
+            cov_nc1.append(nc1)
+            cov_nc2.append(nc2)
+            cov_kmnc.append(kmnc)
+            cov_nbc.append(nbc)
+            cov_snac.append(snac)
+            cov_tknc.append(tknc)
+            cov_tknp.append(tknp)
+            logger.info(xlabel)
 
-    np.save('Q2_original/xlabel.npy', xlabel)
-    np.save('Q2_original/cov_nc1.npy', cov_nc1)
-    np.save('Q2_original/cov_nc2.npy', cov_nc2)
-    np.save('Q2_original/cov_kmnc.npy', cov_kmnc)
-    np.save('Q2_original/cov_nbc.npy', cov_nbc)
-    np.save('Q2_original/cov_snac.npy', cov_snac)
-    np.save('Q2_original/cov_tknc.npy', cov_tknc)
-    np.save('Q2_original/cov_tknp.npy', cov_tknp)
+        np.save(os.path.join(cov_dir, 'xlabel.npy'), xlabel)
+        np.save(os.path.join(cov_dir, 'cov_nc1.npy'), cov_nc1)
+        np.save(os.path.join(cov_dir, 'cov_nc2.npy'), cov_nc2)
+        np.save(os.path.join(cov_dir, 'cov_kmnc.npy'), cov_kmnc)
+        np.save(os.path.join(cov_dir, 'cov_nbc.npy'), cov_nbc)
+        np.save(os.path.join(cov_dir, 'cov_snac.npy'), cov_snac)
+        np.save(os.path.join(cov_dir, 'cov_tknc.npy'), cov_tknc)
+        np.save(os.path.join(cov_dir, 'cov_tknp.npy'), cov_tknp)
 
 
 
