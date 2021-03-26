@@ -13,6 +13,11 @@ from art.attacks.evasion import DeepFool, NewtonFool
 from art.attacks.evasion import SquareAttack, SpatialTransformation
 from art.attacks.evasion import ShadowAttack, Wasserstein
 
+import tensorflow as tf
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+from tensorflow.python.client import device_lib
+
+
 DATA_DIR = param.DATA_DIR
 DATASET_NAMES = param.DATASET_NAMES
 
@@ -43,3 +48,8 @@ def call_function_by_attack_name(attack_name):
         param.ST: SpatialTransformation,
         param.WA: Wasserstein
     }[attack_name]
+
+
+def get_available_gpus():
+    local_device_protos = device_lib.list_local_devices()
+    return [x.name for x in local_device_protos if x.device_type == 'GPU']
