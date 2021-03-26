@@ -20,7 +20,6 @@ from keras import backend as K
 from keras.models import load_model
 
 import art
-from art.attacks.evasion import FastGradientMethod
 from art.estimators.classification import KerasClassifier
 
 from art.attacks.evasion import FastGradientMethod
@@ -30,7 +29,7 @@ from art.attacks.evasion import BasicIterativeMethod
 from art.attacks.evasion import SaliencyMapMethod
 from art.attacks.evasion import AutoProjectedGradientDescent
 from art.attacks.evasion import DeepFool, NewtonFool
-from art.attacks.evasion import SquareAttack, SpatialTransformation
+from art.attacks.evasion import SquareAttack, SpatialTransformation, Wasserstein
 
 
 import tensorflow as tf
@@ -49,7 +48,6 @@ def customTime(*args):
     converted = utc_dt.astimezone(pytz.timezone("Singapore"))
     return converted.timetuple()
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 ## [original from FSE author] for solving some specific problems, don't care
 config = tf.ConfigProto()
@@ -78,7 +76,8 @@ DF = "deepfool"
 NF = "newtonfool"
 SA = "squareattack"
 ST = "spatialtransformation"
-ATTACK_NAMES = [APGD, BIM, CW, DF, FGSM, JSMA, NF, PGD, SA, ST]
+WA = 'wassersteinattack'
+ATTACK_NAMES = [APGD, BIM, CW, DF, FGSM, JSMA, NF, PGD, SA, ST, WA]
 ## Note:  already tried APGD, but it doesn't work
 
 
@@ -179,7 +178,8 @@ def call_function_by_attack_name(attack_name):
         NF: NewtonFool,
         PGD: ProjectedGradientDescent,
         SA: SquareAttack,
-        ST: SpatialTransformation
+        ST: SpatialTransformation,
+        WA: Wasserstein
     }[attack_name]
 
 
