@@ -1,7 +1,10 @@
+import sys
+sys.path.append('..')
+import parameters as param
+from utils import get_available_gpus
 import multiprocessing
 from multiprocessing import Pool, Process, Queue, Manager
 import os
-from adv_train_example import check_data_path
 import tensorflow as tf
 
 
@@ -19,8 +22,6 @@ def train(gpu_id):
 
 if __name__=='__main__':
 
-    DATA_DIR = "../data/"
-    MODEL_DIR = "../models/"
 
     datasets = ['cifar', 'mnist', 'svhn']
     model_dict = {
@@ -29,20 +30,7 @@ if __name__=='__main__':
                 'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
                 }
 
-    attack_names = ['fgsm', 'pgd', 'bim']
-
-
-
-    ### verify path
-    for dataset_name in model_dict.keys():
-        # verify data path
-        check_data_path(dataset_name)
-        # verify model path
-        for model_name in model_dict[dataset_name]:
-            model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
-            assert os.path.exists(model_path)
-
-
+    attack_names = ['apgd']
 
 
     ### add combinations into queues
@@ -58,7 +46,8 @@ if __name__=='__main__':
 
 
     p_list = []
-    for i in range(tf.contrib.eager.num_gpus()):
+
+    for i in range(len(get_available_gpus())):
         gpu_id = i
         p = multiprocessing.Process(target=train, args=(str(gpu_id), ))
         p_list.append(p)
