@@ -14,7 +14,7 @@ def train(gpu_id):
     while True:
         if not q.empty():
             attack_name, dataset, model_name = q.get()
-            cmd = 'CUDA_VISIBLE_DEVICES=' + gpu_id + ' python adv_train_example.py -dataset ' + dataset + ' -model ' + model_name + ' -attack ' + attack_name
+            cmd = 'CUDA_VISIBLE_DEVICES=' + gpu_id + ' python adv_train_example.py -dataset ' + dataset + ' -model ' + model_name + ' -attack ' + attack_name + ' --nb_epochs 200'
             os.system(cmd)
         else:
             print("Finished")

@@ -117,5 +117,5 @@ if __name__ == "__main__":
     batch_size = args.batch_size
     nb_epochs = args.nb_epochs
 
-    adv_retrain(attack_name, dataset, model_name, nb_epochs=80, batch_size=512)
+    adv_retrain(attack_name, dataset, model_name, nb_epochs=nb_epochs, batch_size=batch_size)
 
