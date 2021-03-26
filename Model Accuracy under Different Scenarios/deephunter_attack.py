@@ -9,7 +9,6 @@ from keras import backend as K
 
 import tensorflow as tf
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 ####for solving some specific problems, don't care
 config = tf.ConfigProto()
@@ -22,6 +21,12 @@ import random
 import shutil
 import warnings
 import sys
+
+
+DATA_DIR = "../data/"
+MODEL_DIR = "../models/"
+
+
 
 warnings.filterwarnings("ignore")
 
@@ -289,7 +294,8 @@ def mutate(img, dataset):
 
 # the data is in range(-.5, .5)
 def load_data(dataset_name):
-    assert dataset_name in DATASET_NAMES
+    assert (dataset_name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
+    dataset_name = dataset_name.lower()
     x_train = np.load(DATA_DIR + dataset_name + '/benign/x_train.npy')
     y_train = np.load(DATA_DIR + dataset_name + '/benign/y_train.npy')
     x_test = np.load(DATA_DIR + dataset_name + '/benign/x_test.npy')
@@ -300,10 +306,10 @@ def load_data(dataset_name):
 
 if __name__ == '__main__':
 
-    datasets = ['mnist', 'cifar', 'svhn']
+    datasets = ['cifar']
     model_dict = {
                 'mnist': ['lenet1', 'lenet4', 'lenet5'],
-                'cifar': ['vgg16'], # , 'resnet20'
+                'cifar': ['resnet20'], # , 'resnet20'
                 'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
                 }
                 
@@ -316,7 +322,7 @@ if __name__ == '__main__':
             from keras.models import load_model
 
             model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset, model_name)
-             model = load_model(model_path)
+            model = load_model(model_path)
             model.summary()
 
 
@@ -328,9 +334,13 @@ if __name__ == '__main__':
                     x_adv = np.expand_dims(new_image, axis=0)
                 else:
                     x_adv = np.concatenate((x_adv, np.expand_dims(new_image, axis=0)), axis=0)
-
-            print(x_adv.shape)
-            np.save('./data/' + dataset + '_data/model/' + 'deephunter_adv_test_{}.npy'.format(model_name), x_adv)
+            
+            ### {dataset}/{adv}/{model}/{attack}/deephunter_adv_test
+            adv_dir = "{}{}/adv/{}/{}/".format(DATA_DIR, dataset, model_name, 'deephunter')
+            if not os.path.exists(adv_dir):
+                os.makedirs(adv_dir)
+            dp_adv_path = "{}deephunter_adv_test.npy".format(adv_dir)
+            np.save(dp_adv_path, x_adv)
 
 
 
