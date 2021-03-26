@@ -1,10 +1,14 @@
+import sys
+sys.path.append('..')
+import parameters as param
+from utils import load_data
+
 import argparse
 import os
 
 import random
 import shutil
 import warnings
-import sys
 
 warnings.filterwarnings("ignore")
 
@@ -20,35 +24,7 @@ import os
 import prettytable as pt
 from attack import gen_adv_data
 
-BIM = "bim"
-CW = "cw"
-FGSM = "fgsm"
-JSMA = "jsma"
-PGD = "pgd"
-APGD = "apgd"
-DF = "deepfool"
-NF = "newtonfool"
-SA = "squareattack"
-ST = "spatialtransformation"
-ATTACK_NAMES = [APGD, BIM, CW, DF, FGSM, JSMA, NF, PGD, SA, ST]
-DATA_DIR = "../data/"
-MODEL_DIR = "../models/"
 
-
-####for solving some specific problems, don't care
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
-sess = tf.Session(config=config)
-
-# the data is in range(-.5, .5)
-def load_data(dataset_name):
-    assert (dataset_name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
-    dataset_name = dataset_name.lower()
-    x_train = np.load(DATA_DIR + dataset_name + '/benign/x_train.npy')
-    y_train = np.load(DATA_DIR + dataset_name + '/benign/y_train.npy')
-    x_test = np.load(DATA_DIR + dataset_name + '/benign/x_test.npy')
-    y_test = np.load(DATA_DIR + dataset_name + '/benign/y_test.npy')
-    return x_train, y_train, x_test, y_test
 
 class AttackEvaluate:
     # model does not have softmax layer
@@ -93,29 +69,18 @@ class AttackEvaluate:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='MR and Linf')
-    parser.add_argument('-dataset', help="dataset to use", choices=['mnist', 'cifar', 'svhn'])
-    parser.add_argument('-model', help="target model to attack",
-                        choices=['vgg16', 'resnet20', 'lenet1', 'lenet4', 'lenet5', 'svhn_model',
-                                 'svhn_first', 'svhn_second'])
-    args = parser.parse_args()
-
-    # dataset = args.dataset
-    # model_name = args.model
-    # attack = 'PGD'
-
-    datasets = ['cifar', 'mnist', 'svhn'] #, 
+    datasets = ['cifar', 'mnist', 'svhn']
     model_dict = {
-                'mnist': ['lenet1', 'lenet4', 'lenet5'], #, 'lenet4', 'lenet5'
+                'mnist': ['lenet1', 'lenet4', 'lenet5'],
                 'cifar': ['vgg16'], # , 'resnet20'
                 'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
                 }
 
-    defense_names = ['Benign', 'DeepHunter'] # , 'DeepHunter'
-    optim_defenses = [FGSM, PGD]
+    defense_names = ['Benign', 'DeepHunter']
+    optim_defenses = [param.FGSM, param.PGD]
 
     attack_names = ['Benign', 'DeepHunter']
-    optim_attacks = [FGSM, PGD]
+    optim_attacks = [param.APGD]
 
     table = pt.PrettyTable()
     table.field_names = ["Dataset", "Model"] + attack_names + optim_attacks
@@ -135,13 +100,13 @@ if __name__ == '__main__':
                 # To-Do: to be modified after we generate using new paths.    
                 if defense == 'Benign':
                     ### load benign model
-                    model_defenses[defense] = load_model("{}{}/{}.h5".format(MODEL_DIR, dataset, model_name))
+                    model_defenses[defense] = load_model("{}{}/{}.h5".format(param.MODEL_DIR, dataset, model_name))
                 elif defense == 'DeepHunter':
                     ### load deephunter model
                     model_defenses[defense] = load_model('new_model/dp_{}.h5'.format(model_name))
                 else:
                     #### load models trained with optimization-based attack
-                    model_path = "{}{}/{}".format(MODEL_DIR, dataset, 'adv_' + model_name + '_' + defense + '.h5')
+                    model_path = "{}{}/{}".format(param.MODEL_DIR, dataset, 'adv_' + model_name + '_' + defense + '.h5')
                     model_defenses[defense] = load_model(model_path)
 
 
@@ -155,7 +120,7 @@ if __name__ == '__main__':
                     x_adv_attacks[attack] = x_test
                 elif attack == 'DeepHunter':
                     ### deephunter dataset
-                    adv_dir = "{}{}/adv/{}/{}/".format(DATA_DIR, dataset, model_name, 'deephunter')
+                    adv_dir = "{}{}/adv/{}/{}/".format(param.DATA_DIR, dataset, model_name, 'deephunter')
                     dp_adv_path = "{}deephunter_adv_test.npy".format(adv_dir)
                     x_adv_attacks[attack] = np.load(dp_adv_path)
                 else:
