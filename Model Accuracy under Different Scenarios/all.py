@@ -1,6 +1,5 @@
 import argparse
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 import random
 import shutil
@@ -105,18 +104,18 @@ if __name__ == '__main__':
     # model_name = args.model
     # attack = 'PGD'
 
-    datasets = ['mnist'] #, 'cifar'
+    datasets = ['cifar', 'mnist', 'svhn'] #, 
     model_dict = {
-                'mnist': ['lenet1'], #, 'lenet4', 'lenet5'
+                'mnist': ['lenet1', 'lenet4', 'lenet5'], #, 'lenet4', 'lenet5'
                 'cifar': ['vgg16'], # , 'resnet20'
                 'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
                 }
 
-    defense_names = ['Benign', 'DeepHunter']
-    optim_defenses = ['FGSM']
+    defense_names = ['Benign', 'DeepHunter'] # , 'DeepHunter'
+    optim_defenses = [FGSM, PGD]
 
     attack_names = ['Benign', 'DeepHunter']
-    optim_attacks = [FGSM]
+    optim_attacks = [FGSM, PGD]
 
     table = pt.PrettyTable()
     table.field_names = ["Dataset", "Model"] + attack_names + optim_attacks
@@ -156,7 +155,9 @@ if __name__ == '__main__':
                     x_adv_attacks[attack] = x_test
                 elif attack == 'DeepHunter':
                     ### deephunter dataset
-                    x_adv_attacks[attack] = np.load('./data/' + dataset + '_data/model/' + 'deephunter_adv_test_{}.npy'.format(model_name))
+                    adv_dir = "{}{}/adv/{}/{}/".format(DATA_DIR, dataset, model_name, 'deephunter')
+                    dp_adv_path = "{}deephunter_adv_test.npy".format(adv_dir)
+                    x_adv_attacks[attack] = np.load(dp_adv_path)
                 else:
                     pass
 
