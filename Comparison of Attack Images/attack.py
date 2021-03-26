@@ -14,14 +14,13 @@ import numpy as np
 import warnings
 warnings.filterwarnings("ignore", message=r"Passing", category=FutureWarning)
 
-import keras
-from keras import backend as K
+import tensorflow.keras as keras
+from tensorflow.keras import backend as K
 ## load mine trained model
-from keras.models import load_model
+from tensorflow.keras.models import load_model
 
 import art
-from art.attacks.evasion import FastGradientMethod
-from art.estimators.classification import KerasClassifier
+from art.estimators.classification import TensorFlowV2Classifier
 
 from art.attacks.evasion import FastGradientMethod
 from art.attacks.evasion import CarliniLInfMethod
@@ -54,12 +53,13 @@ def customTime(*args):
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 ## [original from FSE author] for solving some specific problems, don't care
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
-sess = tf.Session(config=config)
+# config = tf.compat.v1.ConfigProto()
+# config.gpu_options.allow_growth = True
+# sess = tf.compat.v1.Session(config=config)
 
 
-VERBOSE = False
+# VERBOSE = False
+VERBOSE = True
 
 DATA_DIR = "../data/"
 MODEL_DIR = "../models/"
@@ -85,14 +85,36 @@ WA = "wasserstein"
 ATTACK_NAMES = [APGD, BIM, CW, DF, FGSM, JSMA, NF, PGD, SA, SHA, ST, WA]
 ## Note:  already tried APGD, but it doesn't work
 
+optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
+
+
+def train_step(model, images, labels):
+    with tf.GradientTape() as tape:
+        predictions = model(images, training=True)
+        loss = loss_object(labels, predictions)
+    gradients = tape.gradient(loss, model.trainable_variables)
+    optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+
+loss_object = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
 
 ## classifier paramaters
 ## depend to the dataset used
 classifier_params = {}
 for dataset_name in DATASET_NAMES :
-    classifier_params[dataset_name] = {}
-classifier_params[MNIST] = {"clip_values": (-0.5, 0.5)}
-classifier_params[SVHN] = {"clip_values": (-0.5, 0.5)}
+    classifier_params[dataset_name] = {"loss_object": loss_object, "train_step": train_step}
+
+classifier_params[MNIST]["nb_classes"] = 10
+classifier_params[MNIST]["input_shape"] = (28, 28, 1)
+classifier_params[MNIST]["clip_values"] = (-0.5, 0.5)
+
+classifier_params[CIFAR]["nb_classes"] = 10
+classifier_params[CIFAR]["input_shape"] = (32, 32, 3)
+
+classifier_params[SVHN]["nb_classes"] = 10
+classifier_params[SVHN]["input_shape"] = (32, 32, 3)
+classifier_params[SVHN]["clip_values"] = (-0.5, 0.5)
+
+
 
 ## attack parameters for generating adversarial images
 ## Note: I use the same format with FSE paper, i.e. params[<attack>][<dataset>]
@@ -107,7 +129,7 @@ attack_params = {}
 # empty means using the original parameters for ART
 attack_params[APGD] = {}
 for dataset_name in DATASET_NAMES:
-    attack_params[APGD][dataset_name] = {}
+    attack_params[APGD][dataset_name] = {"loss_type": "cross_entropy"}
 
 attack_params[CW] = {}
 for dataset_name in DATASET_NAMES :
@@ -202,7 +224,7 @@ def gen_adv_data(model, x, y, attack_name, dataset_name, batch_size=2048):
     logging.getLogger().setLevel(logging.CRITICAL)
     
     classifier_param = classifier_params[dataset_name]
-    classifier = KerasClassifier(model, **classifier_param)
+    classifier = TensorFlowV2Classifier(model=model, **classifier_param)
     
     attack_param = attack_params[attack_name][dataset_name]
     if attack_name not in [ST] :
