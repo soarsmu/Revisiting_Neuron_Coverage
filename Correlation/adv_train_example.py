@@ -71,6 +71,10 @@ def adv_retrain(attack_name, dataset, model_name, nb_epochs=80, batch_size=512):
         attack_param["verbose"] = VERBOSE
     
     attack = call_function_by_attack_name(attack_name)(classifier, **attack_param)
+    x_test_pgd = attack.generate(x_test, y_test)
+    labels_pgd = np.argmax(classifier.predict(x_test_pgd), axis=1)
+    print('Accuracy on original ' + attack_name + ' adversarial samples: %.2f%%' %
+          (np.sum(labels_pgd == labels_true) / x_test.shape[0] * 100))
 
     # Adversarial Training
     trainer = AdversarialTrainer(classifier, attack, ratio=1.0)
