@@ -77,7 +77,7 @@ def adv_retrain(attack_name, dataset, model_name, nb_epochs=80, batch_size=512):
     trainer.fit(x_train, y_train, nb_epochs=nb_epochs, batch_size=batch_size)
 
     # Save model
-    classifier.save(filename= 'adv_' + model_name + '_' + attack_name + '.h5', path="{}{}".format(MODEL_DIR, dataset))
+    classifier.save(filename= 'adv_' + model_name + '_' + attack_name + '.h5', path="{}{}".format(param.MODEL_DIR, dataset))
     
     # Evaluate the adversarially trained model on clean test set
     labels_true = np.argmax(y_test, axis=1)
