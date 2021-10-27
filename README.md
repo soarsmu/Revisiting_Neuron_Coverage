@@ -29,7 +29,7 @@ bash latest-install.sh
 - requirements.txt                                       # Required dependencies
 ```
 
-## Quick start
+## Data Preparation
 
 ### Data Source
 
@@ -38,17 +38,37 @@ bash latest-install.sh
 
 You will get two zip files: 'all-data.zip' (12.2 G, the data file) and 'DNNTesting/CovTesting-v1.1.zip' (5.2 M, the codes file). Please unzip the codes and data files to get the codes and data for experiments. After unzipping 'all-data.zip', you will get three zip files named 'data.zip' (4.1 G), 'Table 2 data.zip' (3.5 G) and 'Table 3 data.zip' (4.6 G).
 
-### Data Usage
+Alterantively, use the following command to download:
+```
+# Download the 'data' folder, make sure that you are under the root folder.
+gdown https://drive.google.com/uc?id=1bClp6T9VuvTzSwspVf_zRkZptI31F6XI
+# Decompress it
+unzip data.zip
+
+## Download 'Table 2 data.zip' 
+cd Comparison\ of\ Attack\ Images/
+gdown https://drive.google.com/uc?id=1DZK2gY6Gz991FS_5mXtLnsx3ZiVhUNMY
+# Decompress it
+unzip Table\ 2\ data.zip 
+mv Table\ 2\ data/data/ data/
+rm -r Table\ 2\ data
+
+## Download 'Table 3 data.zip'
+cd Model\ Accuracy\ under\ Different\ Scenarios/
+gdown https://drive.google.com/uc?id=18MN6HNT-9DR6cML6r8mInPb4GC7drRBc
+unzip unzip Table\ 3\ data.zip
+mv Table\ 3\ data/data/ data/
+mv Table\ 3\ data/new_model/ new_model/
+rm -r Table\ 3\ data
+```
+
 
 * Unzip 'data.zip' and get three folders: 'cifar_data', 'mnist_data' and 'svhn_data'. Please put these three folders under the ['data' folder](https://github.com/DNNTesting/CovTesting/tree/master/data) in the main folder. 
 * Unzip 'Table 2 data.zip' and get three folders: 'cifar_data', 'mnist_data' and 'svhn_data'. Please put these three folders under the ['data' folder](https://github.com/DNNTesting/CovTesting/tree/master/Comparison%20of%20Attack%20Images/data) under the ['Comparison of Attack Images' folder](https://github.com/DNNTesting/CovTesting/tree/master/Comparison%20of%20Attack%20Images). 
 * Unzip 'Table 3 data.zip' and get two folders: 'data' and 'new_model'. Please merge these two folders into the ['data' folder](https://github.com/DNNTesting/CovTesting/tree/master/Model%20Accuracy%20under%20Different%20Scenarios/data) and the ['new_model' folder](https://github.com/DNNTesting/CovTesting/tree/master/Model%20Accuracy%20under%20Different%20Scenarios/new_model) under the ['Model Accuracy under Different Scenarios' folder](https://github.com/DNNTesting/CovTesting/tree/master/Model%20Accuracy%20under%20Different%20Scenarios), respectively. 
 
 
-### Folder Structure
-
-
-### Experiments
+## Experiments
 
 Details of how to run each experiment are written as README files in each folder. Users can customize the scripts to run their own data based on provided instructions.
 
