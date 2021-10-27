@@ -1,17 +1,13 @@
 import numpy as np
 import tensorflow as tf
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+import argparse
 
 ####for solving some specific problems, don't care
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
 sess = tf.compat.v1.Session(config=config)
 
-import os
-
 import warnings
-from helper import Coverage
 from helper import load_data, softmax, compare_nc, mutate
 
 
@@ -19,16 +15,22 @@ warnings.filterwarnings("ignore")
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_name", default='lenet1', type=str)
+    parser.add_argument("--dataset", default='mnist', type=str)
+    parser.add_argument("--model_layer", default=9, type=int)
 
-    model_name = 'lenet1'
-    model_layer = 8
 
+    args = parser.parse_args()
+    model_name = args.model_name
+    model_layer = args.model_layer
+    dataset_name = args.dataset
     # load dataset
-    x_train, y_train, x_test, y_test = load_data('mnist')
+    x_train, y_train, x_test, y_test = load_data(dataset_name)
 
     # import model
     from keras.models import load_model
-    model = load_model('../data/' + 'mnist' + '_data/model/' + model_name + '.h5')
+    model = load_model('../data/' + dataset_name + '_data/model/' + model_name + '.h5')
     model.summary()
 
     order_number = 0
