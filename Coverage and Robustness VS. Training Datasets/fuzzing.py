@@ -18,13 +18,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", default='lenet1', type=str)
     parser.add_argument("--dataset", default='mnist', type=str)
-    parser.add_argument("--model_layer", default=9, type=int)
-
+    parser.add_argument("--model_layer", default=8, type=int)
+    parser.add_argument("--order_number", default=0, type=int)
 
     args = parser.parse_args()
     model_name = args.model_name
     model_layer = args.model_layer
     dataset_name = args.dataset
+    order_number = args.order_number
     # load dataset
     x_train, y_train, x_test, y_test = load_data(dataset_name)
 
@@ -33,7 +34,7 @@ if __name__ == '__main__':
     model = load_model('../data/' + dataset_name + '_data/model/' + model_name + '.h5')
     model.summary()
 
-    order_number = 0
+    
 
     nc_index = {}
     nc_number = 0
