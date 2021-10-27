@@ -13,9 +13,9 @@ from skimage.metrics import structural_similarity as ssim
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 ####for solving some specific problems, don't care
-config = tf.ConfigProto()
+config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
-sess = tf.Session(config=config)
+sess = tf.compat.v1.Session(config=config)
 
 def lp_distance(pic1, pic2):
     pic1 = np.round(pic1*255)
