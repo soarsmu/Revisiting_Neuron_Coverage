@@ -103,7 +103,7 @@ class Coverage:
             begin, end = 0, batch
             data_num = self.x_adv.shape[0]
             while begin < data_num:
-                layer_output_adv = get_layer_i_output(model, i, self.x_adv[begin: end])
+                layer_output_adv = get_layer_i_output(self.model, i, self.x_adv[begin: end])
                 layer_output_adv -= neuron_min
                 layer_output_adv /= (interval + 10 ** (-100))
                 layer_output_adv[layer_output_adv < 0.] = -1
