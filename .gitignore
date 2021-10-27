@@ -122,3 +122,6 @@ Model Accuracy under Different Scenarios/fuzzing/*
 data/
 models/
 coverage/
+
+# ignore .zip containing data
+*.zip
