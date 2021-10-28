@@ -24,15 +24,40 @@
 
 2. Generate new training data to be added to the original training dataset:
 
-   ```$ python fuzzing.py```  
+   Using `lenet1`, `mnist` as an example, to randomly generate adversarial examples and then select those that can improve the coerage, you can use the following commands:
 
-   To generate T1-T10, please modify the [order_number](https://github.com/DNNTesting/CovTesting/blob/fd2a5c649fb73b24826c80ee060e5a0250527e61/Coverage%20and%20Robustness%20VS.%20Training%20Datasets/fuzzing.py#L336) from 0 to 9 in sequence. All results will be stored at  'fuzzing/nc_index_{}.npy'.format(order_number).
+   ```
+   CUDA_VISIBLE_DEVICES=0 python fuzzing.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 0 &
+   CUDA_VISIBLE_DEVICES=0 python fuzzing.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 1 &
+   CUDA_VISIBLE_DEVICES=0 python fuzzing.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 2 &
+   CUDA_VISIBLE_DEVICES=0 python fuzzing.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 3 &
+   CUDA_VISIBLE_DEVICES=0 python fuzzing.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 4 &
+   CUDA_VISIBLE_DEVICES=0 python fuzzing.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 5 &
+   CUDA_VISIBLE_DEVICES=0 python fuzzing.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 6 &
+   CUDA_VISIBLE_DEVICES=0 python fuzzing.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 7 &
+   CUDA_VISIBLE_DEVICES=0 python fuzzing.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 8 &
+   CUDA_VISIBLE_DEVICES=0 python fuzzing.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 9 &
+   CUDA_VISIBLE_DEVICES=0 python fuzzing.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 10 &
+   ```
+   
+   All results will be stored at  `fuzzing/nc_index_{}.npy.format(order_number)`.
 
 3. Test the coverage for T1-T10:
 
-   ```$ python compare_coverage.py``` 
+   ```
+   CUDA_VISIBLE_DEVICES=0 python compare_coverage.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 1 &
+   CUDA_VISIBLE_DEVICES=0 python compare_coverage.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 2 &
+   CUDA_VISIBLE_DEVICES=0 python compare_coverage.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 3 &
+   CUDA_VISIBLE_DEVICES=0 python compare_coverage.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 4 &
+   CUDA_VISIBLE_DEVICES=0 python compare_coverage.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 5 &
+   CUDA_VISIBLE_DEVICES=0 python compare_coverage.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 6 &
+   CUDA_VISIBLE_DEVICES=0 python compare_coverage.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 7 &
+   CUDA_VISIBLE_DEVICES=0 python compare_coverage.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 8 &
+   CUDA_VISIBLE_DEVICES=0 python compare_coverage.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 9 &
+   CUDA_VISIBLE_DEVICES=0 python compare_coverage.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 10 &
+   ```
 
-   You can change the value of [T](https://github.com/DNNTesting/CovTesting/blob/fd2a5c649fb73b24826c80ee060e5a0250527e61/Coverage%20and%20Robustness%20VS.%20Training%20Datasets/compare_coverage.py#L253) (select from 1-10) to get the coverage values for T1-T10, respectively. All of the results are stored in 'coverage_result.txt' and can be used to draw figure 2. (refer to 'Figure 2 and figure 3.xlsx')
+   Get the coverage values for T1-T10, respectively (under `coverage_coverage_results`). All of the results are stored in 'coverage_result.txt' and can be used to draw figure 2. (refer to 'Figure 2 and figure 3.xlsx')
 
 4. Generate the testing dataset:
 
@@ -40,13 +65,33 @@
 
    ```$ python exchange_testing_dataset.py``` 
 
-   When running 'fuzzing_testset.py', please modify the [order_number](https://github.com/DNNTesting/CovTesting/blob/fd2a5c649fb73b24826c80ee060e5a0250527e61/Coverage%20and%20Robustness%20VS.%20Training%20Datasets/fuzzing_testset.py#L336) from 0 to 1 in sequence. The results will be stored as 'fuzzing/nc_index_test_0.npy' and 'fuzzing/nc_index_test_1.npy'. After running 'exchange_testing_dataset.py', the new testing dataset will be generated and stored as 'x_test_new.npy' at the main folder. 
+   > When running 'fuzzing_testset.py', please modify the [order_number](https://github.com/DNNTesting/CovTesting/blob/fd2a5c649fb73b24826c80ee060e5a0250527e61/Coverage%20and%20Robustness%20VS.%20Training%20Datasets/fuzzing_testset.py#L336) from 0 to 1 in sequence. The results will be stored as 'fuzzing/nc_index_test_0.npy' and 'fuzzing/nc_index_test_1.npy'. After running 'exchange_testing_dataset.py', the new testing dataset will be generated and stored as 'x_test_new.npy' at the main folder. 
+
+   *Zhou: I have no idea why they are doing this....*
+
+   ```
+   CUDA_VISIBLE_DEVICES=0 python fuzzing_testset.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 0 &
+   CUDA_VISIBLE_DEVICES=0 python fuzzing_testset.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 1 &
+   ```
+
+   Then, we run ```python exchange_testing_dataset.py```.
 
 5. Use the new training datasets T1-T10 to retrain the model:
 
-   ```$ python retrain_robustness.py``` 
+   ```
+   CUDA_VISIBLE_DEVICES=0 python retrain_robustness.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 1 &
+   CUDA_VISIBLE_DEVICES=0 python retrain_robustness.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 2 &
+   CUDA_VISIBLE_DEVICES=0 python retrain_robustness.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 3 &
+   CUDA_VISIBLE_DEVICES=0 python retrain_robustness.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 4 &
+   CUDA_VISIBLE_DEVICES=0 python retrain_robustness.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 5 &
+   CUDA_VISIBLE_DEVICES=2 python retrain_robustness.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 6 &
+   CUDA_VISIBLE_DEVICES=2 python retrain_robustness.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 7 &
+   CUDA_VISIBLE_DEVICES=2 python retrain_robustness.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 8 &
+   CUDA_VISIBLE_DEVICES=2 python retrain_robustness.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 9 &
+   CUDA_VISIBLE_DEVICES=2 python retrain_robustness.py --model_name lenet1 --dataset mnist --model_layer 8 --order_number 10 &
+   ```
 
-   You can change the value of [T](https://github.com/DNNTesting/CovTesting/blob/fd2a5c649fb73b24826c80ee060e5a0250527e61/Coverage%20and%20Robustness%20VS.%20Training%20Datasets/retrain_robustness.py#L381) (select from 1-10) to get the models retrained by T1-T10, respectively. The retrained models are saved at ('new_model/' + dataset +'/model_{}.h5'.format(0-9)). After every  retraining, this file will also measure the robustness of the corresponding retrained model and results are stored in 'attack_evaluate_result.txt', which can be used to generate figure 3. (refer to 'Figure 2 and figure 3.xlsx')
+   The retrained models are saved at ('new_model/' + dataset +'/model_{}.h5'.format(0-9)). After every  retraining, this file will also measure the robustness of the corresponding retrained model and results are stored in 'attack_results/attack_evaluate_result.txt', which can be used to generate figure 3. (refer to 'Figure 2 and figure 3.xlsx')
 
 
 
