@@ -15,7 +15,7 @@ Unzip the two compressed files: `data.zip` and `models.zip` into the root folder
 
 ## Running
 Since we have multiple models to train, we want to utilize multiple GPUs to train.
-Please go to `./Correlation` folder, and then run `python fun_adv_train.py`
+Please go to `./Correlation` folder, and then run `python run_adv_train.py`
 It will train multiple models in parallel. 
 
 These folders will be stored under `./models` folder.
