@@ -304,15 +304,6 @@ def load_data(dataset_name):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Deephunter for DNN')
-    parser.add_argument('-dataset', help="dataset to use", choices=['mnist', 'cifar', 'svhn'])
-    parser.add_argument('-model', help="target model to attack", choices=['vgg16', 'resnet20', 'lenet1', 'lenet4', 'lenet5', 'svhn_model', 'svhn_second', 'svhn_first'])
-
-    args = parser.parse_args()
-
-    dataset_name = "mnist"
-    model_name = "lenet1"
-    
     datasets = ['mnist', 'cifar', 'svhn']
     model_dict = {
         'mnist': ['lenet1', 'lenet4', 'lenet5'],
@@ -320,8 +311,8 @@ if __name__ == '__main__':
         'svhn': ['svhn_model', 'svhn_first', 'svhn_second']
     }
     
-    attack_name = "DeepHunter"
-
+    attack_name = "deephunter"
+    
     for dataset_name in datasets:
         if dataset_name in model_dict :
             for model_name in model_dict[dataset_name]:
@@ -334,19 +325,24 @@ if __name__ == '__main__':
                 model.summary()
 
                 x_adv = np.array([])
+                y_adv = np.array([])
                 for i in range(1000):
                     new_image = mutate(x_test[i], dataset_name)
 
                     if x_adv.size == 0:
                         x_adv = np.expand_dims(new_image, axis=0)
+                        y_adv = np.expand_dims(y_test[i], axis=0)
                     else:
                         x_adv = np.concatenate((x_adv, np.expand_dims(new_image, axis=0)), axis=0)
+                        y_adv = np.concatenate((y_adv, np.expand_dims(y_test[i], axis=0)), axis=0)
 
-                adv_dir = "{}{}/adv/{}/".format(DATA_DIR, dataset_name, model_name)
+                adv_dir = "{}{}/adv/{}/{}/".format(DATA_DIR, dataset_name, model_name, attack_name)
                 if not os.path.exists(adv_dir):
                     os.makedirs(adv_dir)
-                adv_path = "{}{}.npy".format(adv_dir, attack_name)
-                np.save(adv_path, x_adv)
+                x_adv_path = "{}x_test.npy".format(adv_dir)
+                y_adv_path = "{}y_test.npy".format(adv_dir)
+                np.save(x_adv_path, x_adv)
+                np.save(y_adv_path, y_adv)
 
 
 
