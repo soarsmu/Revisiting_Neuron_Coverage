@@ -8,10 +8,10 @@ import matplotlib.pyplot as plt
 
 from skimage import data, img_as_float
 from skimage.metrics import structural_similarity as ssim
-
+from helper import load_data, load_adv_data
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-
+MODEL_DIR = "../models/"
 ####for solving some specific problems, don't care
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -30,15 +30,6 @@ def softmax(x):
     exp_x = np.exp(x)
     return exp_x / np.sum(exp_x)
 
-def load_data(name):
-    assert (name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
-    name = name.lower()
-    x_train = np.load('./data/' + name + '_data/' + name + '_x_train.npy')
-    y_train = np.load('./data/' + name + '_data/' + name + '_y_train.npy')
-    x_test = np.load('./data/' + name + '_data/' + name + '_x_test.npy')
-    y_test = np.load('./data/' + name + '_data/' + name + '_y_test.npy')
-    return x_train, y_train, x_test, y_test
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='MR and Linf')
@@ -49,26 +40,24 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    attack = 'PGD'
     dataset = args.dataset
     model_name = args.model
     # print(args.dataset)
 
 
     ### load deephunter adv
-    x_adv_deep = np.load('./data/' + dataset + '_data/model/' + 'deephunter_adv_test_' + model_name + '.npy')
-
-
+    x_adv_deep, y_dp = load_adv_data(dataset, model_name, 'deephunter')
     ### load PGD adv
-    x_adv_pgd = np.load('./data/' + dataset + '_data/model/' + model_name + '_' + attack + '.npy')
-
-
+    x_adv_pgd, y_dg = load_adv_data(dataset, model_name, 'pgd')
+    for i in range(len(y_dp)):
+        assert y_dp[i].all() == y_dp[i].all()
     # load dataset
     x_train, y_train, x_test, y_test = load_data(dataset)
 
     # import model
     from keras.models import load_model
-    model = load_model('./data/' + dataset + '_data/model/' + model_name + '.h5')
+    model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset, model_name)
+    model = load_model(model_path)
     model.summary()
 
 
@@ -100,7 +89,8 @@ if __name__ == '__main__':
     if dataset == 'cifar':
         li_deep = li_deep/255
 
-    with open("compare_result.txt", "a") as f:
+    os.makedirs('./table_2/{}/{}'.format(dataset, model_name), exist_ok=True)
+    with open("./table_2/{}/{}/compare_result.txt".format(dataset, model_name), "a") as f:
         f.write("\n------------------------------------------------------------------------------\n")
         f.write('the result of {} {} is: \n'.format(args.dataset, args.model))
         f.write('MR of DH is {} \n'.format(MR_deep))
