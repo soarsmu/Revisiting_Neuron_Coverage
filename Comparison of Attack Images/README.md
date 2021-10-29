@@ -30,44 +30,19 @@
 
 1. Before the experiment, please be sure that the data is well prepared according to the tutorial in the main page of the repository.
 
-   
 
-   We also provide 'test_example.sh' script as next several steps' reference.
 
-2. PGD attack the dataset: 
+2. Apply (optimization-based) adversarial attacks.
 
-   Please run the following commands to implement the PGD attack for different models:
+   Please run `bash attack.sh` to apply "bim" "cw" "deepfool" "fgsm" "newtonfool" "pgd" "spatialtransformation" "squareattack" to different models and datasets.
 
-   ```python
-   python attack.py  -dataset mnist  -model lenet1 -attack PGD -batch_size 128
-   python attack.py  -dataset mnist  -model lenet4 -attack PGD -batch_size 128
-   python attack.py  -dataset mnist  -model lenet5 -attack PGD -batch_size 128
-   
-   python attack.py  -dataset cifar  -model vgg16 -attack PGD -batch_size 128
-   python attack.py  -dataset cifar  -model resnet20 -attack PGD -batch_size 128
-   
-   python attack.py  -dataset svhn  -model svhn_model -attack PGD -batch_size 128
-   python attack.py  -dataset svhn  -model svhn_first -attack PGD -batch_size 128
-   python attack.py  -dataset svhn  -model svhn_second -attack PGD -batch_size 128
-   ```
-
-   Attacked dataset will be stored as ('./data/' + args.dataset + '_data/model/' + args.model  + _PGD.npy').
+   Adversrial datasets will be stored at `../data/dataset/adv/model/attack`, e.g., `../data/mnist/adv/lenet/bim`
 
 3. Use DeepHunter to generate test cases:
-   Please run the following commands to use DeepHunter to generate the test cases for different models. 
 
-   ```python
-   python deephunter_attack.py  -dataset mnist  -model lenet1
-   python deephunter_attack.py  -dataset mnist  -model lenet4
-   python deephunter_attack.py  -dataset mnist  -model lenet5
-   
-   python deephunter_attack.py  -dataset cifar  -model vgg16
-   python deephunter_attack.py  -dataset cifar  -model resnet20
-   
-   python deephunter_attack.py  -dataset svhn  -model svhn_model
-   python deephunter_attack.py  -dataset svhn  -model svhn_first
-   python deephunter_attack.py  -dataset svhn  -model svhn_second
-   ```
+   Use `python deephunter.py`. It generates adversarial examples under `../data/mnist/adv/lenet/deephunter`.
+
+   *Zhou: Here it only generates 1000 deephunter examples for each dataset. I don't know why.*
 
 4. Compare DH and DP:
 
@@ -86,7 +61,7 @@
    python criteria.py  -dataset svhn  -model svhn_second
    ```
 
-   The results will be stored in 'compare_result.txt'. 
+   The results will be stored in './table_2/dataset/model/compare_result.txt'. 
 
    
 
