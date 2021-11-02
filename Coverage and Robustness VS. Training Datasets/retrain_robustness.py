@@ -49,7 +49,7 @@ if __name__ == '__main__':
             x_train = np.concatenate((x_train, np.expand_dims(x, axis=0)), axis=0)
             y_train = np.concatenate((y_train, np.expand_dims(y_train[y], axis=0)), axis=0)
 
-    retrained_model = retrain(model, x_train, y_train, x_test, y_test, batch_size=512, epochs=30)
+    retrained_model = retrain(model, x_train, y_train, x_test, y_test, batch_size=32, epochs=5)
     retrained_model.save('new_model/' + dataset +'/model_{}.h5'.format(T-1))
 
     criteria = AttackEvaluate(retrained_model, x_test, y_test, x_test_new)
