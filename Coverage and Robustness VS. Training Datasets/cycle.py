@@ -104,7 +104,7 @@ def cycle(T: int):
 
     ## Retrain the model
     retrained_model = retrain(current_model, x_train, y_train, x_test, y_test, batch_size=32, epochs=5)
-    new_model_path = "{}{}/{}/{}.h5".format(THIS_MODEL_DIR, dataset_name, model_name, str(T))
+    new_model_path = "{}{}/{}/{}/{}.h5".format(THIS_MODEL_DIR, dataset_name, model_name, is_improve, str(T))
     retrained_model.save(new_model_path)
 
 
@@ -124,7 +124,7 @@ if __name__ == '__main__':
     parser.add_argument("--dataset", default='mnist', type=str)
     parser.add_argument("--model_layer", default=8, type=int)
     parser.add_argument("--order_number", default=0, type=int)
-    parser.add_argument("--improve_coverage", default=True, type=bool)
+    parser.add_argument("--improve_coverage", action='store_true')
 
     args = parser.parse_args()
     model_name = args.model_name
@@ -133,16 +133,18 @@ if __name__ == '__main__':
     order_number = args.order_number
     improve_coverage = args.improve_coverage
 
-    l = [0, model_layer]
 
     is_improve = 'improve' if improve_coverage else 'no_improve'
 
     # Load the original model
     model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
     model = load_model(model_path)
+    model_layer = len(model.layers) - 1
+    l = [0, model_layer]
     
     # Save it under this folder
     new_model_path = "{}{}/{}/{}/{}.h5".format(THIS_MODEL_DIR, dataset_name, model_name, is_improve, str(0))
+    model.save(new_model_path)
 
     for order_number in range(1, 11):
         cycle(order_number)
