@@ -97,6 +97,21 @@
 
 ## Experiment Extension
 
+### Generate examples to evaluate the robustness metrics
+
+```
+CUDA_VISIBLE_DEVICES=2 python fuzzing_testset.py --model_name lenet1 --dataset mnist &
+CUDA_VISIBLE_DEVICES=2 python fuzzing_testset.py --model_name lenet4 --dataset mnist &
+CUDA_VISIBLE_DEVICES=2 python fuzzing_testset.py --model_name lenet5 --dataset mnist &
+CUDA_VISIBLE_DEVICES=2 python fuzzing_testset.py --model_name vgg16 --dataset cifar &
+CUDA_VISIBLE_DEVICES=2 python fuzzing_testset.py --model_name resnet20 --dataset cifar &
+CUDA_VISIBLE_DEVICES=2 python fuzzing_testset.py --model_name svhn_model --dataset svhn &
+CUDA_VISIBLE_DEVICES=2 python fuzzing_testset.py --model_name svhn_second --dataset svhn &
+CUDA_VISIBLE_DEVICES=2 python fuzzing_testset.py --model_name svhn_first --dataset svhn &
+```
+
+These command will generate coverage-driven examples to evaluate the model robustness in the next step. The examples are stored in `./new_test/dataset/model/x_test_new.npy`.
+
 ### Generate examples that can improve $M_i$ instead of $M_0$
 
 In the original experiment, we generate many examples by modifying the `nc_number` in `fuzzing.py`. However, it always select the examples that can improve the coverage of the original model ($M_0$). To be more like a process of program repair, we use generated example $T_{i-1}$ to retrain the model and get $M_{i}$. At the next step, we only select the examples that can improve coverage of $M_{i}$ instead of $M_{0}$.
@@ -104,21 +119,25 @@ In the original experiment, we generate many examples by modifying the `nc_numbe
 
    ```
    # It all works
-   CUDA_VISIBLE_DEVICES=2 python cycle.py --model_name lenet1 --dataset mnist --model_layer 8  --improve_coverage &
-   CUDA_VISIBLE_DEVICES=2 python cycle.py --model_name lenet1 --dataset mnist --model_layer 8   &
-   CUDA_VISIBLE_DEVICES=2 python cycle.py --model_name lenet4 --dataset mnist --model_layer 9  --improve_coverage &
-   CUDA_VISIBLE_DEVICES=2 python cycle.py --model_name lenet4 --dataset mnist --model_layer 9   &
-   CUDA_VISIBLE_DEVICES=2 python cycle.py --model_name lenet5 --dataset mnist --model_layer 10  --improve_coverage &
-   CUDA_VISIBLE_DEVICES=2 python cycle.py --model_name lenet5 --dataset mnist --model_layer 10   &
+   CUDA_VISIBLE_DEVICES=1 python cycle.py --model_name lenet1 --dataset mnist --model_layer 8  --improve_coverage &
+   CUDA_VISIBLE_DEVICES=1 python cycle.py --model_name lenet1 --dataset mnist --model_layer 8   &
+   CUDA_VISIBLE_DEVICES=1 python cycle.py --model_name lenet4 --dataset mnist --model_layer 9  --improve_coverage &
+   CUDA_VISIBLE_DEVICES=1 python cycle.py --model_name lenet4 --dataset mnist --model_layer 9   &
+   CUDA_VISIBLE_DEVICES=3 python cycle.py --model_name lenet5 --dataset mnist --model_layer 10  --improve_coverage &
+   CUDA_VISIBLE_DEVICES=3 python cycle.py --model_name lenet5 --dataset mnist --model_layer 10   &
 
    CUDA_VISIBLE_DEVICES=2 python cycle.py --model_name vgg16 --dataset cifar  --improve_coverage &
-   CUDA_VISIBLE_DEVICES=3 python cycle.py --model_name vgg16 --dataset cifar   &
+   CUDA_VISIBLE_DEVICES=2 python cycle.py --model_name vgg16 --dataset cifar   &
+   CUDA_VISIBLE_DEVICES=5 python cycle.py --model_name resnet20 --dataset cifar  --improve_coverage &
+   CUDA_VISIBLE_DEVICES=5 python cycle.py --model_name resnet20 --dataset cifar   &
 
-   CUDA_VISIBLE_DEVICES=2 python cycle.py --model_name svhn_model --dataset svhn  --improve_coverage &
-   CUDA_VISIBLE_DEVICES=3 python cycle.py --model_name svhn_model --dataset svhn   &
-   CUDA_VISIBLE_DEVICES=2 python cycle.py --model_name svhn_second --dataset svhn  --improve_coverage &
-   CUDA_VISIBLE_DEVICES=3 python cycle.py --model_name svhn_second --dataset svhn   &
-   CUDA_VISIBLE_DEVICES=2 python cycle.py --model_name svhn_first --dataset svhn  --improve_coverage &
-   CUDA_VISIBLE_DEVICES=3 python cycle.py --model_name svhn_first --dataset svhn   &
-
+   CUDA_VISIBLE_DEVICES=6 python cycle.py --model_name svhn_model --dataset svhn  --improve_coverage &
+   CUDA_VISIBLE_DEVICES=6 python cycle.py --model_name svhn_model --dataset svhn   &
+   CUDA_VISIBLE_DEVICES=4 python cycle.py --model_name svhn_second --dataset svhn  --improve_coverage &
+   CUDA_VISIBLE_DEVICES=4 python cycle.py --model_name svhn_second --dataset svhn   &
+   CUDA_VISIBLE_DEVICES=4 python cycle.py --model_name svhn_first --dataset svhn  --improve_coverage &
+   CUDA_VISIBLE_DEVICES=4 python cycle.py --model_name svhn_first --dataset svhn   &
    ```
+
+
+   Coverage metrics are saved under `coverage_result/dataset/model/`, and robustness metrics are saved under `robustness_results/dataset/model`.
