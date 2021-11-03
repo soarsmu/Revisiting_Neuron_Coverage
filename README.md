@@ -3,12 +3,16 @@
 ## Environment Configuration
 ### Docker 
 ```bash
-docker pull tensorflow/tensorflow:latest-gpu
-docker run --name=covtesting --gpus all --shm-size 32G -it --mount type=bind,src=path_to_covtesting_folder,dst=/workspace tensorflow/tensorflow:latest-gpu
+docker pull zhouyang996/covtesting
+docker run --name=covtesting --gpus all --shm-size 32G -it --mount type=bind,src=path_to_covtesting_folder,dst=/workspace tensorflow/zhouyang996/covtesting
 ```
-Inside the container, run the following command to install necessary libraries.
-```bash
-bash latest-install.sh
+
+Download the `adversarial-robustness-toolbox` and install necessary libraries using the following commands,
+```
+gdown https://drive.google.com/uc?id=1e5iIP_c06VpZSuSlZUZw2L5kKTiqvF-B
+tar -xvf adv.tar
+cd adversarial-robustness-toolbox
+pip install .
 ```
 
 ## Repo Structure:
