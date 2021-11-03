@@ -1,36 +1,31 @@
 import numpy as np
+from helper import load_data
+import argparse
+import os
 
-# the data is in range(-.5, .5)
-def load_data(name):
-    assert (name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
-    name = name.lower()
-    x_train = np.load('../data/' + name + '_data/' + name + '_x_train.npy')
-    y_train = np.load('../data/' + name + '_data/' + name + '_y_train.npy')
-    x_test = np.load('../data/' + name + '_data/' + name + '_x_test.npy')
-    y_test = np.load('../data/' + name + '_data/' + name + '_y_test.npy')
-    return x_train, y_train, x_test, y_test
 
 if __name__ == '__main__':
-    dataset = 'mnist'
-    model_name = 'lenet1'
-    l = [0, 8]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_name", default='lenet1', type=str)
+    parser.add_argument("--dataset", default='mnist', type=str)
+    parser.add_argument("--model_layer", default=8, type=int)
+    parser.add_argument("--order_number", default=0, type=int)
 
-    x_train, y_train, x_test, y_test = load_data(dataset)
+    args = parser.parse_args()
 
-    # ## load mine trained model
-    from keras.models import load_model
+    model_name = args.model_name
 
-    model = load_model('../data/' + dataset + '_data/model/' + model_name + '.h5')
-    model.summary()
+    dataset_name = args.dataset
+    order_number = args.order_number
+    x_train, y_train, x_test, y_test = load_data(dataset_name)
 
-    index = np.load('fuzzing/nc_index_test_{}.npy'.format(0), allow_pickle=True).item()
-    for y, x in index.items():
-        print(y)
-        x_test[y] = x
+    store_path = 'new_test/{}/{}'.format(dataset_name, model_name)
+    assert os.path.exists(store_path)
 
-    index = np.load('fuzzing/nc_index_test_{}.npy'.format(1), allow_pickle=True).item()
-    for y, x in index.items():
-        print(y)
-        x_test[y] = x
+    for order_number in range(2):
+        index = np.load(os.path.join(store_path, 'nc_index_test_{}.npy'.format(order_number)), allow_pickle=True).item()
+        for y, x in index.items():
+            print(y)
+            x_test[y] = x
 
-    np.save('x_test_new.npy', x_test)
+    np.save(os.path.join(store_path, 'x_test_new.npy'), x_test)
