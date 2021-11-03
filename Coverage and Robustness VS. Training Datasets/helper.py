@@ -425,9 +425,11 @@ class AttackEvaluate:
 
         # prepare the save dir for the generated image(png or jpg)
         image_save = os.path.join('./tmp', 'image')
-        if os.path.exists(image_save):
-            shutil.rmtree(image_save)
-        os.mkdir(image_save)
+        os.makedirs(image_save, exist_ok=True)
+
+        # if os.path.exists(image_save):
+        #     shutil.rmtree(image_save)
+        # os.mkdir(image_save)
         # print('\nNow, all adversarial examples are saved as PNG and then compressed using *Guetzli* in the {} fold ......\n'.format(image_save))
 
         for i in range(len(self.adv_samples)):
