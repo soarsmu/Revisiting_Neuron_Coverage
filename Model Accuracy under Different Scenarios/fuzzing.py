@@ -28,7 +28,7 @@ if __name__ == '__main__':
     datasets = ['mnist', 'cifar', 'svhn']
     model_dict = {
                 'mnist': ['lenet1', 'lenet4', 'lenet5'],
-                'cifar': ['vgg16'], # 'resnet20' has error, related to layer.
+                'cifar': ['vgg16', 'resnet20'], 
                 'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
                 }
 
@@ -70,7 +70,6 @@ if __name__ == '__main__':
                         if nc_symbol == True:
                             nc_index[i] = new_image
                             nc_number += 1
-                    break
 
                 print(nc_number)
                 
