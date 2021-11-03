@@ -91,7 +91,7 @@ def cycle(T: int):
     ## Load the current dataset we have
     x_train, y_train, x_test, y_test = load_data(dataset_name)
     for i in range(T-1):
-        index = np.load('fuzzing/nc_index_{}.npy'.format(i), allow_pickle=True).item()
+        index = np.load('fuzzing/{}/{}/{}/nc_index_{}.npy'.format(dataset_name, model_name, is_improve, i), allow_pickle=True).item()
         for y, x in index.items():
             x_train = np.concatenate((x_train, np.expand_dims(x, axis=0)), axis=0)
             y_train = np.concatenate((y_train, np.expand_dims(y_train[y], axis=0)), axis=0)
@@ -103,7 +103,6 @@ def cycle(T: int):
         new_image = mutate(x_train[i])
         if i % 100 == 0:
             print('.', end='')
-            break
         if softmax(current_model.predict(np.expand_dims(new_image, axis=0))).argmax(axis=-1) != softmax(current_model.predict(np.expand_dims(x_train[i], axis=0))).argmax(axis=-1):
             # find an adversarial example
             nc_symbol = compare_nc(current_model, x_train, y_train, x_test, y_test, new_image, x_train[i], model_layer)
