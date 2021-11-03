@@ -142,11 +142,11 @@ def cycle(T: int):
     evaluate_coverage(retrained_model, l, T, x_train, y_train, x_test, y_test)
 
     ## Evaluate robustness
-    x_test_new = np.load('x_test_new.npy') # To-Do: Need to be fixed! This is only for mnist + lenet1.
+    store_path = 'new_test/{}/{}'.format(dataset_name, model_name)
+    x_test_new = np.load(os.path.join(store_path, 'x_test_new.npy'))
     evaluate_robustness(T, retrained_model, x_test, y_test, x_test_new)
 
     print("Done")
-    pass
 
 
 
