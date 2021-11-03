@@ -35,7 +35,16 @@ pip install .
 
 ## Data Preparation
 
-### Data Source
+```
+gdown https://drive.google.com/uc?id=1didnbbxwzmSFI3gV2-ehPcj9wWRkNHxD
+tar -xvf data.tar
+mv ./data/models ./models
+mv ./data/data ./data
+```
+
+The following is the original data, the structure of which is a bit unclear. We don't use them.
+
+### The original Data Source
 
 * Download data and codes through the DOI link: <a href="https://doi.org/10.5281/zenodo.3908793"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.3908793.svg" alt="DOI"></a>
 * Google Drive mirror: https://drive.google.com/drive/folders/16w93LPkaF0AP9QxIty9Y6ipU-N4cbPUd?usp=sharing
