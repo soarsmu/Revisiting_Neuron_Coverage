@@ -2,6 +2,7 @@
 
 from helper import load_data, mutate, softmax, compare_nc, retrain
 from helper import Coverage
+from helper import AttackEvaluate
 import argparse
 import tensorflow as tf
 import numpy as np
@@ -17,9 +18,36 @@ config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
 sess = tf.compat.v1.Session(config=config)
 
-def evaluate_robustness(model):
+def evaluate_robustness(T, retrained_model, x_test, y_test, x_test_new):
+    path_to_result = "robustness_results/{}/{}/{}".format(dataset_name, model_name, is_improve)
+    os.makedirs(path_to_result, exist_ok=True)
 
-    pass
+    criteria = AttackEvaluate(retrained_model, x_test, y_test, x_test_new)
+
+    MR = criteria.misclassification_rate()
+    ACAC = criteria.avg_confidence_adv_class()
+    ACTC = criteria.avg_confidence_true_class()
+    ALP_L0, ALP_L2, ALP_Li = criteria.avg_lp_distortion()
+    ASS = criteria.avg_SSIM()
+    PSD = criteria.avg_PSD()
+    NTE = criteria.avg_noise_tolerance_estimation()
+    _, _, RGB = criteria.robust_gaussian_blur()
+    _, _, RIC = criteria.robust_image_compression(1)
+
+    with open(os.path.join(path_to_result, "robustness_metrics_{}.txt".format(T)), "a") as f:
+        f.write("\n------------------------------------------------------------------------------\n")
+        f.write('the result of {} {} is: \n'.format(dataset_name, model_name))
+        f.write('MR: {} \n'.format(MR))
+        f.write('ACAC: {} \n'.format(ACAC))
+        f.write('ACTC: {} \n'.format(ACTC))
+        f.write('ALP_L0: {} \n'.format(ALP_L0))
+        f.write('ALP_L2: {} \n'.format(ALP_L2))
+        f.write('ALP_Li: {} \n'.format(ALP_Li))
+        f.write('ASS: {} \n'.format(ASS))
+        f.write('PSD: {} \n'.format(PSD))
+        f.write('NTE: {} \n'.format(NTE))
+        f.write('RGB: {} \n'.format(RGB))
+        f.write('RIC: {} \n'.format(RIC))
 
 
 def evaluate_coverage(model, l, T, x_train, y_train, x_test, y_test):
@@ -75,6 +103,7 @@ def cycle(T: int):
         new_image = mutate(x_train[i])
         if i % 100 == 0:
             print('.', end='')
+            break
         if softmax(current_model.predict(np.expand_dims(new_image, axis=0))).argmax(axis=-1) != softmax(current_model.predict(np.expand_dims(x_train[i], axis=0))).argmax(axis=-1):
             # find an adversarial example
             nc_symbol = compare_nc(current_model, x_train, y_train, x_test, y_test, new_image, x_train[i], model_layer)
@@ -103,7 +132,7 @@ def cycle(T: int):
         y_train = np.concatenate((y_train, np.expand_dims(y_train[y], axis=0)), axis=0)
 
     ## Retrain the model
-    retrained_model = retrain(current_model, x_train, y_train, x_test, y_test, batch_size=32, epochs=5)
+    retrained_model = retrain(current_model, x_train, y_train, x_test, y_test, batch_size=128, epochs=5)
     new_model_path = "{}{}/{}/{}/{}.h5".format(THIS_MODEL_DIR, dataset_name, model_name, is_improve, str(T))
     retrained_model.save(new_model_path)
 
@@ -112,6 +141,9 @@ def cycle(T: int):
     ## Evaluate coverage
     evaluate_coverage(retrained_model, l, T, x_train, y_train, x_test, y_test)
 
+    ## Evaluate robustness
+    x_test_new = np.load('x_test_new.npy') # To-Do: Need to be fixed! This is only for mnist + lenet1.
+    evaluate_robustness(T, retrained_model, x_test, y_test, x_test_new)
 
     print("Done")
     pass
