@@ -2,7 +2,6 @@ import numpy as np
 import tensorflow as tf
 import os
 import argparse
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 MODEL_DIR = "../models/"
 
@@ -19,15 +18,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", default='lenet1', type=str)
     parser.add_argument("--dataset", default='mnist', type=str)
-    parser.add_argument("--model_layer", default=8, type=int)
-    parser.add_argument("--order_number", default=0, type=int)
 
     args = parser.parse_args()
 
     model_name = args.model_name
-    model_layer = args.model_layer
     dataset_name = args.dataset
-    order_number = args.order_number
 
     # load dataset
     x_train, y_train, x_test, y_test = load_data(dataset_name)
@@ -36,7 +31,7 @@ if __name__ == '__main__':
     from keras.models import load_model
     model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
     model = load_model(model_path)
-    model.summary()
+    model_layer = len(model.layers) - 1
 
     nc_index = {}
     nc_number = 0
@@ -57,6 +52,14 @@ if __name__ == '__main__':
 
         print(nc_number)
         np.save(os.path.join(store_path, 'nc_index_test_{}.npy'.format(order_number)), nc_index)
+
+    for order_number in range(2):
+        index = np.load(os.path.join(store_path, 'nc_index_test_{}.npy'.format(order_number)), allow_pickle=True).item()
+        for y, x in index.items():
+            print(y)
+            x_test[y] = x
+
+    np.save(os.path.join(store_path, 'x_test_new.npy'), x_test)
 
 
 
