@@ -495,7 +495,7 @@ def mutate(img, dataset):
 
 # the data is in range(-.5, .5)
 def load_data(dataset_name):
-    assert (dataset_name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
+    assert (dataset_name.upper() in ['MNIST', 'CIFAR', 'SVHN', 'FASHION_MNIST', 'OXFORD_FLOWERS102'])
     dataset_name = dataset_name.lower()
     x_train = np.load(DATA_DIR + dataset_name + '/benign/x_train.npy')
     y_train = np.load(DATA_DIR + dataset_name + '/benign/y_train.npy')
@@ -529,7 +529,7 @@ def compare_nc(model, x_train, y_train, x_test, y_test, x_new, x_old, layer):
 
 # the data is in range(-.5, .5)
 def load_data(dataset_name):
-    assert (dataset_name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
+    assert (dataset_name.upper() in ['MNIST', 'CIFAR', 'SVHN', 'FASHION_MNIST', 'OXFORD_FLOWERS102'])
     dataset_name = dataset_name.lower()
     x_train = np.load(DATA_DIR + dataset_name + '/benign/x_train.npy')
     y_train = np.load(DATA_DIR + dataset_name + '/benign/y_train.npy')
