@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # please check this link to browse more datasets
     # https://www.tensorflow.org/datasets/catalog/fashion_mnist
     # choices = ["fashion_mnist", "eurosat", "oxford_flowers102", "mnist", "cifar10"]
-    dataset_name = "fashion_mnist"
+    dataset_name = "eurosat"
 
     # batch_size=-1 to get the full dataset in NumPy arrays from the returned tf.Tensor object
     if dataset_name == "fashion_mnist" or dataset_name == "oxford_flowers102":
@@ -32,6 +32,11 @@ if __name__ == "__main__":
             name=dataset_name, split=tfds.Split.TRAIN, batch_size=-1)
         dataset_test = tfds.load(
             name=dataset_name, split=tfds.Split.VALIDATION, batch_size=-1)
+    elif dataset_name == "eurosat":
+        dataset_train = tfds.load(
+            name=dataset_name, split="train[:80%]", batch_size=-1)
+        dataset_test = tfds.load(
+            name=dataset_name, split="train[80%:]", batch_size=-1)
     else:
         dataset_train = tfds.load(
             name=dataset_name, split=tfds.Split.TRAIN, batch_size=-1)
