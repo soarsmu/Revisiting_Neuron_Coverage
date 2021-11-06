@@ -43,6 +43,15 @@ def get_layer_i_output(model, i, data):
     return ret
 
 
+def get_all_layers_outputs(model, data):
+    layer_model = K.function([model.layers[0].input], [model.layers[i].output for i in range(len(model.layers))])
+    tmp = layer_model([data])
+    num = data.shape[0]
+    ret = []
+    for t in tmp:
+        ret.append(np.reshape([t], (num, -1)))
+    return ret
+
 class Coverage:
     def __init__(self, model, x_train, y_train, x_test, y_test, x_adv):
         self.model = model
@@ -52,27 +61,27 @@ class Coverage:
         self.y_test = y_test
         self.x_adv = x_adv
 
-    # find scale factors and min num
-    def scale(self, layers, batch=1024):
-        data_num = self.x_adv.shape[0]
-        factors = dict()
-        for i in layers:
-            begin, end = 0, batch
-            max_num, min_num = np.NINF, np.inf
-            while begin < data_num:
-                layer_output = get_layer_i_output(self.model, i, self.x_adv[begin:end])
-                tmp = layer_output.max()
-                max_num = tmp if tmp > max_num else max_num
-                tmp = layer_output.min()
-                min_num = tmp if tmp < min_num else min_num
-                begin += batch
-                end += batch
-            factors[i] = (max_num - min_num, min_num)
-        return factors
+    # # find scale factors and min num
+    # def scale(self, layers, batch=1024):
+    #     data_num = self.x_adv.shape[0]
+    #     factors = dict()
+    #     for i in layers:
+    #         begin, end = 0, batch
+    #         max_num, min_num = np.NINF, np.inf
+    #         while begin < data_num:
+    #             layer_output = get_layer_i_output(self.model, i, self.x_adv[begin:end])
+    #             tmp = layer_output.max()
+    #             max_num = tmp if tmp > max_num else max_num
+    #             tmp = layer_output.min()
+    #             min_num = tmp if tmp < min_num else min_num
+    #             begin += batch
+    #             end += batch
+    #         factors[i] = (max_num - min_num, min_num)
+    #     return factors
 
     # 1 Neuron Coverage
     def NC(self, layers, threshold=0., batch=1024):
-        factors = self.scale(layers, batch=batch)
+        # factors = self.scale(layers, batch=batch)
         neuron_num = 0
         for i in layers:
             out_shape = self.model.layers[i].output.shape
@@ -80,20 +89,26 @@ class Coverage:
         neuron_num = int(neuron_num)
 
         activate_num = 0
-        data_num = self.x_adv.shape[0]
+        all_layers_outputs = get_all_layers_outputs(self.model, self.x_adv)
         for i in layers:
             neurons = np.prod(self.model.layers[i].output.shape[1:])
             buckets = np.zeros(neurons).astype('bool')
-            begin, end = 0, batch
-            while begin < data_num:
-                layer_output = get_layer_i_output(self.model, i, self.x_adv[begin:end])
-                # scale the layer output to (0, 1)
-                layer_output -= factors[i][1]
-                layer_output /= factors[i][0]
-                col_max = np.max(layer_output, axis=0)
-                begin += batch
-                end += batch
-                buckets[col_max > threshold] = True
+
+            max_num, min_num = np.NINF, np.inf
+            
+            layer_output = all_layers_outputs[i]
+            # scale the layer output to (0, 1)
+
+            tmp = layer_output.max()
+            max_num = tmp if tmp > max_num else max_num
+            tmp = layer_output.min()
+            min_num = tmp if tmp < min_num else min_num
+
+            layer_output -= min_num
+            layer_output /= max_num - min_num
+            col_max = np.max(layer_output, axis=0)
+
+            buckets[col_max > threshold] = True
             activate_num += np.sum(buckets)
         # print('NC:\t{:.3f} activate_num:\t{} neuron_num:\t{}'.format(activate_num / neuron_num, activate_num, neuron_num))
         return activate_num / neuron_num, activate_num, neuron_num
@@ -456,7 +471,7 @@ class AttackEvaluate:
         self.robust_gaussian_blur()
         self.robust_image_compression(1)
 
-def mutate(img):
+def mutate(img, queue):
     # ref_img is the reference image, img is the seed
 
     # cl means the current state of transformation
@@ -517,7 +532,8 @@ def mutate(img):
     # img_new = img_new.reshape(img.shape)
 
     # Otherwise the mutation is failed. Line 20 in Algo 2
-    return img_new
+    queue.put(img_new)
+    # return img_new
 
 
 def load_data(dataset_name):
@@ -533,7 +549,7 @@ def softmax(x):
     return exp_x / np.sum(exp_x)
 
 def compare_nc(model, x_train, y_train, x_test, y_test, x_new, x_old, layer):
-    l = [0, layer]
+    l = range(layer)
     coverage1 = Coverage(model, x_train, y_train, x_test, y_test, np.expand_dims(x_new, axis=0))
     nc1, _, _ = coverage1.NC(l, threshold=0.75, batch=1024)
 
