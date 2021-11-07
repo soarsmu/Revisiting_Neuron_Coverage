@@ -82,50 +82,92 @@ class Coverage:
     #         factors[i] = (max_num - min_num, min_num)
     #     return factors
 
+    # def NC(self, layers, threshold=0., batch=1024):
+    #     factors = self.scale(layers, batch=batch)
+    #     neuron_num = 0
+    #     for i in layers:
+    #         out_shape = self.model.layers[i].output.shape
+    #         neuron_num += np.prod(out_shape[1:])
+    #     neuron_num = int(neuron_num)
+
+    #     activate_num = 0
+    #     data_num = self.x_adv.shape[0]
+    #     for i in layers:
+    #         neurons = np.prod(self.model.layers[i].output.shape[1:])
+    #         buckets = np.zeros(neurons).astype('bool')
+    #         begin, end = 0, batch
+    #         while begin < data_num:
+    #             layer_output = get_layer_i_output(self.model, i, self.x_adv[begin:end])
+    #             # scale the layer output to (0, 1)
+    #             layer_output -= factors[i][1]
+    #             layer_output /= factors[i][0]
+    #             col_max = np.max(layer_output, axis=0)
+    #             begin += batch
+    #             end += batch
+    #             buckets[col_max > threshold] = True
+    #         activate_num += np.sum(buckets)
+    #     # print('NC:\t{:.3f} activate_num:\t{} neuron_num:\t{}'.format(activate_num / neuron_num, activate_num, neuron_num))
+    #     return activate_num / neuron_num, activate_num, neuron_num
+
     # 1 Neuron Coverage
     def NC(self, layers, threshold, batch=1024):
         # factors = self.scale(layers, batch=batch)
         neuron_num = 0
+        buckets = {}
         for i in layers:
             out_shape = self.model.layers[i].output.shape
             neuron_num += np.prod(out_shape[1:])
         neuron_num = int(neuron_num)
 
         if type(threshold) == float:
+            for i in layers:
+                neurons = np.prod(self.model.layers[i].output.shape[1:])
+                buckets[i] = np.zeros(neurons).astype('bool')
             activate_num = 0
         else:
+            for th in threshold:
+                buckets[th] = {}
+                for i in layers:
+                    neurons = np.prod(self.model.layers[i].output.shape[1:])
+                    buckets[th][i] = np.zeros(neurons).astype('bool')
             activate_num = dict(zip(threshold, [0. for th in threshold]))
         
-        all_layers_outputs = get_all_layers_outputs(self.model, self.x_adv)
-        for i in layers:
-            neurons = np.prod(self.model.layers[i].output.shape[1:])
-            max_num, min_num = np.NINF, np.inf
-            
-            layer_output = all_layers_outputs[i]
-            # scale the layer output to (0, 1)
+        data_num = self.x_adv.shape[0]
+        begin, end = 0, batch
+        while begin < data_num:
+            all_layers_outputs = get_all_layers_outputs(self.model, self.x_adv[begin:end])
+            for i in layers:
+                
+                max_num, min_num = np.NINF, np.inf
+                
+                layer_output = all_layers_outputs[i]
+                # scale the layer output to (0, 1)
 
-            tmp = layer_output.max()
-            max_num = tmp if tmp > max_num else max_num
-            tmp = layer_output.min()
-            min_num = tmp if tmp < min_num else min_num
+                tmp = layer_output.max()
+                max_num = tmp if tmp > max_num else max_num
+                tmp = layer_output.min()
+                min_num = tmp if tmp < min_num else min_num
 
-            layer_output -= min_num
-            layer_output /= max_num - min_num
-            col_max = np.max(layer_output, axis=0)
+                layer_output -= min_num
+                layer_output /= max_num - min_num
+                col_max = np.max(layer_output, axis=0)
 
-            if type(threshold) == float:
-                buckets = np.zeros(neurons).astype('bool')
-                buckets[col_max > threshold] = True
-                activate_num += np.sum(buckets)
-            else:
-                for th in threshold:
-                    buckets = np.zeros(neurons).astype('bool')
-                    buckets[col_max > th] = True
-                    activate_num[th] += np.sum(buckets)
-
+                if type(threshold) == float:
+                    buckets[i][col_max > threshold] = True
+                else:
+                    for th in threshold:
+                        buckets[th][i][col_max > th] = True
+                        
+            begin += batch
+            end += batch
         if type(threshold) == float:
+            for i in layers:
+                activate_num += np.sum(buckets[i])
             return activate_num / neuron_num, activate_num, neuron_num
         else:
+            for th in threshold:
+                for i in layers:
+                    activate_num[th] += np.sum(buckets[th][i])
             return {k:v/neuron_num for k,v in activate_num.items()}, activate_num, neuron_num
 
     # 2 k-multisection neuron coverage, neuron boundary coverage and strong activation neuron coverage
