@@ -9,6 +9,9 @@ import os
 import shutil
 from skimage.measure import compare_ssim as SSIM
 
+import warnings
+warnings.filterwarnings("ignore")
+
 VERBOSE = True
 
 DATA_DIR = "../data/"
@@ -80,7 +83,7 @@ class Coverage:
     #     return factors
 
     # 1 Neuron Coverage
-    def NC(self, layers, threshold=0., batch=1024):
+    def NC(self, layers, threshold, batch=1024):
         # factors = self.scale(layers, batch=batch)
         neuron_num = 0
         for i in layers:
@@ -88,12 +91,14 @@ class Coverage:
             neuron_num += np.prod(out_shape[1:])
         neuron_num = int(neuron_num)
 
-        activate_num = 0
+        if type(threshold) == float:
+            activate_num = 0
+        else:
+            activate_num = dict(zip(threshold, [0. for th in threshold]))
+        
         all_layers_outputs = get_all_layers_outputs(self.model, self.x_adv)
         for i in layers:
             neurons = np.prod(self.model.layers[i].output.shape[1:])
-            buckets = np.zeros(neurons).astype('bool')
-
             max_num, min_num = np.NINF, np.inf
             
             layer_output = all_layers_outputs[i]
@@ -108,10 +113,20 @@ class Coverage:
             layer_output /= max_num - min_num
             col_max = np.max(layer_output, axis=0)
 
-            buckets[col_max > threshold] = True
-            activate_num += np.sum(buckets)
-        # print('NC:\t{:.3f} activate_num:\t{} neuron_num:\t{}'.format(activate_num / neuron_num, activate_num, neuron_num))
-        return activate_num / neuron_num, activate_num, neuron_num
+            if type(threshold) == float:
+                buckets = np.zeros(neurons).astype('bool')
+                buckets[col_max > threshold] = True
+                activate_num += np.sum(buckets)
+            else:
+                for th in threshold:
+                    buckets = np.zeros(neurons).astype('bool')
+                    buckets[col_max > th] = True
+                    activate_num[th] += np.sum(buckets)
+
+        if type(threshold) == float:
+            return activate_num / neuron_num, activate_num, neuron_num
+        else:
+            return {k:v/neuron_num for k,v in activate_num.items()}, activate_num, neuron_num
 
     # 2 k-multisection neuron coverage, neuron boundary coverage and strong activation neuron coverage
     def KMNC(self, layers, k=10, batch=1024):
@@ -126,7 +141,7 @@ class Coverage:
         u_covered_num = 0
         for i in layers:
             neurons = np.prod(self.model.layers[i].output.shape[1:])
-            print(neurons)
+            # print(neurons)
             begin, end = 0, batch
             data_num = self.x_train.shape[0]
 
@@ -163,10 +178,10 @@ class Coverage:
             covered_num += np.sum(buckets[:, 1:-1])
             u_covered_num += np.sum(buckets[:, -1])
             l_covered_num += np.sum(buckets[:, 0])
-        print('KMNC:\t{:.3f} covered_num:\t{}'.format(covered_num / (neuron_num * k), covered_num))
-        print(
-            'NBC:\t{:.3f} l_covered_num:\t{}'.format((l_covered_num + u_covered_num) / (neuron_num * 2), l_covered_num))
-        print('SNAC:\t{:.3f} u_covered_num:\t{}'.format(u_covered_num / neuron_num, u_covered_num))
+        # print('KMNC:\t{:.3f} covered_num:\t{}'.format(covered_num / (neuron_num * k), covered_num))
+        # print(
+        #     'NBC:\t{:.3f} l_covered_num:\t{}'.format((l_covered_num + u_covered_num) / (neuron_num * 2), l_covered_num))
+        # print('SNAC:\t{:.3f} u_covered_num:\t{}'.format(u_covered_num / neuron_num, u_covered_num))
         return covered_num / (neuron_num * k), (l_covered_num + u_covered_num) / (
                     neuron_num * 2), u_covered_num / neuron_num, covered_num, l_covered_num, u_covered_num, neuron_num * k
 
@@ -198,8 +213,8 @@ class Coverage:
                 begin += batch
                 end += batch
             pattern_num += len(pattern_set)
-        print(
-            'TKNC:\t{:.3f} pattern_num:\t{} neuron_num:\t{}'.format(pattern_num / neuron_num, pattern_num, neuron_num))
+        # print(
+        #     'TKNC:\t{:.3f} pattern_num:\t{} neuron_num:\t{}'.format(pattern_num / neuron_num, pattern_num, neuron_num))
         return pattern_num / neuron_num, pattern_num, neuron_num
 
     # 4 top-k neuron patterns
@@ -236,7 +251,7 @@ class Coverage:
         for i in range(patterns.shape[0]):
             pattern_set.add(to_tuple(patterns[i]))
         pattern_num = len(pattern_set)
-        print('TKNP:\t{:.3f}'.format(pattern_num))
+        # print('TKNP:\t{:.3f}'.format(pattern_num))
         return pattern_num
 
     def all(self, layers, batch=100):
@@ -284,7 +299,7 @@ class AttackEvaluate:
             if self.successful(adv_softmax_preds=self.softmax_prediction[i], nature_true_preds=self.labels_samples[i]):
                 cnt += 1
         mr = cnt / len(self.adv_samples)
-        print('MR:\t\t{:.1f}%'.format(mr * 100))
+        print('MR: {:.1f}%'.format(mr * 100))
         return mr
 
     # 2 ACAC: average confidence of adversarial class
@@ -296,7 +311,7 @@ class AttackEvaluate:
                 cnt += 1
                 conf += np.max(self.softmax_prediction[i])
 
-        print('ACAC:\t{:.3f}'.format(conf / cnt))
+        print('ACAC: {:.3f}'.format(conf / cnt))
         return conf / cnt
 
     # 3 ACTC: average confidence of true class
@@ -309,7 +324,7 @@ class AttackEvaluate:
             if self.successful(adv_softmax_preds=self.softmax_prediction[i], nature_true_preds=self.labels_samples[i]):
                 cnt += 1
                 true_conf += self.softmax_prediction[i, true_labels[i]]
-        print('ACTC:\t{:.3f}'.format(true_conf / cnt))
+        print('ACTC: {:.3f}'.format(true_conf / cnt))
         return true_conf / cnt
 
     # 4 ALP: Average L_p Distortion
@@ -339,7 +354,7 @@ class AttackEvaluate:
         adv_l2 = dist_l2 / cnt
         adv_li = dist_li / cnt
 
-        print('**ALP:**\n\tL0:\t{:.3f}\n\tL2:\t{:.3f}\n\tLi:\t{:.3f}'.format(adv_l0, adv_l2, adv_li))
+        print('ALP:\n  L0:{:.3f}\n  L2:{:.3f}\n  Li:{:.3f}'.format(adv_l0, adv_l2, adv_li))
         return adv_l0, adv_l2, adv_li
 
     # 5 ASS: Average Structural Similarity
@@ -362,7 +377,7 @@ class AttackEvaluate:
                 cnt += 1
                 totalSSIM += SSIM(X=ori_r_channel[i], Y=adv_r_channel[i], multichannel=True)
 
-        print('ASS:\t{:.3f}'.format(totalSSIM / cnt))
+        print('ASS: {:.3f}'.format(totalSSIM / cnt))
         return totalSSIM / cnt
 
     # 6: PSD: Perturbation Sensitivity Distance
@@ -397,7 +412,7 @@ class AttackEvaluate:
                                  image_channel[i, j], image_channel[i, j + 1], image_channel[i + 1, j - 1],
                                  image_channel[i + 1, j],
                                  image_channel[i + 1, j + 1]])))
-        print('PSD:\t{:.3f}'.format(psd / cnt))
+        print('PSD: {:.3f}'.format(psd / cnt))
         return psd / cnt
 
     # 7 NTE: Noise Tolerance Estimation
@@ -411,7 +426,7 @@ class AttackEvaluate:
                 sort_preds = np.sort(self.softmax_prediction[i])
                 nte += sort_preds[-1] - sort_preds[-2]
 
-        print('NTE:\t{:.3f}'.format(nte / cnt))
+        print('NTE: {:.3f}'.format(nte / cnt))
         return nte / cnt
 
     # 8 RGB: Robustness to Gaussian Blur
@@ -429,7 +444,7 @@ class AttackEvaluate:
                 if np.argmax(gb_pred) != np.argmax(self.labels_samples[i]):
                     num_gb += 1
 
-        print('RGB:\t{:.3f}'.format(num_gb / total))
+        print('RGB: {:.3f}'.format(num_gb / total))
         return num_gb, total, num_gb / total
 
     # 9 RIC: Robustness to Image Compression
@@ -457,7 +472,7 @@ class AttackEvaluate:
                 ic_pred = self.model.predict(np.array(ic_sample))
                 if np.argmax(ic_pred) != np.argmax(self.labels_samples[i]):
                     num_ic += 1
-        print('RIC:\t{:.3f}'.format(num_ic / total))
+        print('RIC:{:.3f}'.format(num_ic / total))
         return num_ic, total, num_ic / total
 
     def all(self):
@@ -471,7 +486,7 @@ class AttackEvaluate:
         self.robust_gaussian_blur()
         self.robust_image_compression(1)
 
-def mutate(img, queue):
+def mutate(img):
     # ref_img is the reference image, img is the seed
 
     # cl means the current state of transformation
@@ -532,8 +547,8 @@ def mutate(img, queue):
     # img_new = img_new.reshape(img.shape)
 
     # Otherwise the mutation is failed. Line 20 in Algo 2
-    queue.put(img_new)
-    # return img_new
+    # queue.put(img_new)
+    return img_new
 
 
 def load_data(dataset_name):
