@@ -82,33 +82,6 @@ class Coverage:
     #         factors[i] = (max_num - min_num, min_num)
     #     return factors
 
-    # def NC(self, layers, threshold=0., batch=1024):
-    #     factors = self.scale(layers, batch=batch)
-    #     neuron_num = 0
-    #     for i in layers:
-    #         out_shape = self.model.layers[i].output.shape
-    #         neuron_num += np.prod(out_shape[1:])
-    #     neuron_num = int(neuron_num)
-
-    #     activate_num = 0
-    #     data_num = self.x_adv.shape[0]
-    #     for i in layers:
-    #         neurons = np.prod(self.model.layers[i].output.shape[1:])
-    #         buckets = np.zeros(neurons).astype('bool')
-    #         begin, end = 0, batch
-    #         while begin < data_num:
-    #             layer_output = get_layer_i_output(self.model, i, self.x_adv[begin:end])
-    #             # scale the layer output to (0, 1)
-    #             layer_output -= factors[i][1]
-    #             layer_output /= factors[i][0]
-    #             col_max = np.max(layer_output, axis=0)
-    #             begin += batch
-    #             end += batch
-    #             buckets[col_max > threshold] = True
-    #         activate_num += np.sum(buckets)
-    #     # print('NC:\t{:.3f} activate_num:\t{} neuron_num:\t{}'.format(activate_num / neuron_num, activate_num, neuron_num))
-    #     return activate_num / neuron_num, activate_num, neuron_num
-
     # 1 Neuron Coverage
     def NC(self, layers, threshold, batch=1024):
         # factors = self.scale(layers, batch=batch)
