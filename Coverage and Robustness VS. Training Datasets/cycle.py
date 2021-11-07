@@ -104,12 +104,41 @@ def cycle(T: int):
     ## Load the current dataset we have
     x_train, y_train, x_test, y_test = load_data(dataset_name)
 
-    
-    print("Log: Start do transformation in images")
-    new_images = []
+    if not os.path.exists(os.path.join('new_test/{}/{}'.format(dataset_name, model_name), 'x_test_new.npy')):
+        print("Generate test set")
+        
+        new_images = []
+        for i in tqdm(range(len(x_test)), desc="transformation ......"):
+            new_images.append(mutate(x_test[i]))
 
-    for i in tqdm(range(len(x_train))):
-        new_images.append(mutate(x_train[i]))
+        nc_index = {}
+        nc_number = 0
+        for i in tqdm(range(0, len(x_test), 500), desc="Total progress:"):
+            for index, (pred_new, pred_old) in enumerate(zip(softmax(model.predict(np.array(new_images[i:i+500]))).argmax(axis=-1), softmax(model.predict(x_test[i:i+500])).argmax(axis=-1))):
+                nc_symbol = compare_nc(model, x_train, y_train, x_test, y_test, new_images[i+index], x_test[i+index], model_layer)
+                if nc_symbol == True:
+                    nc_index[i+index] = new_images[i+index]
+                    nc_number += 1
+        
+        print("Log: new image can cover more neurons: {}".format(nc_number))
+        store_path = 'new_test/{}/{}'.format(dataset_name, model_name)
+        os.makedirs(store_path, exist_ok=True)
+        for y, x in nc_index.items():
+            x_test[y] = x
+        np.save(os.path.join(store_path, 'x_test_new.npy'), x_test)
+
+    data_folder = 'fuzzing/{}/{}/{}'.format(dataset_name, model_name, is_improve)
+    os.makedirs(data_folder, exist_ok=True)
+    
+    if not os.path.exists(os.path.join(data_folder, "new_images.npy")):
+        print("Log: Start do transformation in images")
+        new_images = []
+        for i in tqdm(range(len(x_train))):
+            new_images.append(mutate(x_train[i]))
+        np.save(os.path.join(data_folder, "new_images.npy"), new_images)
+    else:
+        print("Log: Load mutantions.")
+        new_images = np.load(os.path.join(data_folder, "new_images.npy"))
 
     for i in range(1, T):
         index = np.load('fuzzing/{}/{}/{}/nc_index_{}.npy'.format(dataset_name, model_name, is_improve, i), allow_pickle=True).item()
@@ -137,8 +166,7 @@ def cycle(T: int):
 
 
     print("Log: new image can/cannot cover more neurons: {}".format(nc_number))
-    data_folder = 'fuzzing/{}/{}/{}'.format(dataset_name, model_name, is_improve)
-    os.makedirs(data_folder, exist_ok=True)
+    
     np.save(os.path.join(data_folder, 'nc_index_{}.npy'.format(T)), nc_index)
 
     # Step 3. Retrain M_i against T_i, to obtain M_{i+1}
@@ -163,7 +191,7 @@ def cycle(T: int):
     ## Evaluate robustness
     print("\nEvaluate robustness ......")
     store_path = 'new_test/{}/{}'.format(dataset_name, model_name)
-    x_test_new = np.load(os.path.join(store_path, 'x_test_new.npy'))
+    x_test_new = np.load(os.path.join(store_path, 'x_test_new.npy'),  allow_pickle=True)
     evaluate_robustness(T, retrained_model, x_test, y_test, x_test_new)
 
     print("Done\n")
@@ -188,25 +216,6 @@ if __name__ == '__main__':
     model = load_model(model_path)
     model_layer = len(model.layers)
     l = range(model_layer)
-
-    x_train, y_train, x_test, y_test = load_data(dataset_name)
-    
-    new_images = []
-    for i in tqdm(range(len(x_test)), desc="transformation ......"):
-        new_images.append(mutate(x_test[i]))
-
-    nc_index = {}
-    nc_number = 0
-    for i in tqdm(range(0, len(x_test), 500), desc="Total progress:"):
-        for index, (pred_new, pred_old) in enumerate(zip(softmax(model.predict(np.array(new_images[i:i+500]))).argmax(axis=-1), softmax(model.predict(x_test[i:i+500])).argmax(axis=-1))):
-            nc_symbol = compare_nc(model, x_train, y_train, x_test, y_test, new_images[i+index], x_test[i+index], model_layer)
-            if nc_symbol == True:
-                nc_index[i+index] = new_images[i+index]
-                nc_number += 1
-    
-    print("Log: new image can cover more neurons: {}".format(nc_number))
-    store_path = 'new_test/{}/{}'.format(dataset_name, model_name)
-    np.save(os.path.join(store_path, 'x_test_new.npy'), nc_index)
 
     # Save it under this folder
     new_model_path = "{}{}/{}/{}/{}.h5".format(THIS_MODEL_DIR, dataset_name, model_name, is_improve, str(0))
