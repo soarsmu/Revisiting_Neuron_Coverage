@@ -146,28 +146,29 @@ def cycle(T: int):
             x_train = np.concatenate((x_train, np.expand_dims(x, axis=0)), axis=0)
             y_train = np.concatenate((y_train, np.expand_dims(y_train[y], axis=0)), axis=0)
 
-    ## Generate new examples
-    nc_index = {}
-    nc_number = 0
-    for i in tqdm(range(5000*(T-1), 5000*(T), 500), desc="Total progress:"):
-        for index, (pred_new, pred_old) in enumerate(zip(softmax(current_model.predict(np.array(new_images[i:i+500]))).argmax(axis=-1), softmax(current_model.predict(x_train[i:i+500])).argmax(axis=-1))):
-            # find an adversarial example
-            if pred_new != pred_old:
-                nc_symbol = compare_nc(current_model, x_train, y_train, x_test, y_test, new_images[i+index], x_train[i+index], model_layer)
-                if nc_symbol and improve_coverage:
-                    # new image can cover more neurons, and we want such improvements
-                        nc_index[i] = new_images[i+index]
-                        nc_number += 1
-                
-                if (not improve_coverage) and (not nc_symbol):
-                    # new image CANNOT cover more neurons, and we want examples cannot improve coverage
-                        nc_index[i] = new_images[i+index]
-                        nc_number += 1
+    if not os.path.exists(os.path.join(data_folder, 'nc_index_{}.npy'.format(T))):
+        ## Generate new examples
+        nc_index = {}
+        nc_number = 0
+        for i in tqdm(range(5000*(T-1), 5000*(T), 500), desc="Total progress:"):
+            for index, (pred_new, pred_old) in enumerate(zip(softmax(current_model.predict(np.array(new_images[i:i+500]))).argmax(axis=-1), softmax(current_model.predict(x_train[i:i+500])).argmax(axis=-1))):
+                # find an adversarial example
+                if pred_new != pred_old:
+                    nc_symbol = compare_nc(current_model, x_train, y_train, x_test, y_test, new_images[i+index], x_train[i+index], model_layer)
+                    if nc_symbol and improve_coverage:
+                        # new image can cover more neurons, and we want such improvements
+                            nc_index[i] = new_images[i+index]
+                            nc_number += 1
+                    
+                    if (not improve_coverage) and (not nc_symbol):
+                        # new image CANNOT cover more neurons, and we want examples cannot improve coverage
+                            nc_index[i] = new_images[i+index]
+                            nc_number += 1
 
 
-    print("Log: new image can/cannot cover more neurons: {}".format(nc_number))
-    
-    np.save(os.path.join(data_folder, 'nc_index_{}.npy'.format(T)), nc_index)
+        print("Log: new image can/cannot cover more neurons: {}".format(nc_number))
+        
+        np.save(os.path.join(data_folder, 'nc_index_{}.npy'.format(T)), nc_index)
 
     # Step 3. Retrain M_i against T_i, to obtain M_{i+1}
     ## Augment the newly generate examples into the training data
