@@ -125,3 +125,7 @@ coverage/
 
 # ignore .zip containing data
 *.zip
+
+# ignore results
+Coverage and Robustness VS. Training Datasets/coverage_results
+Coverage and Robustness VS. Training Datasets/robustness_results
