@@ -157,12 +157,12 @@ def cycle(T: int):
                     nc_symbol = compare_nc(current_model, x_train, y_train, x_test, y_test, new_images[i+index], x_train[i+index], model_layer)
                     if nc_symbol and improve_coverage:
                         # new image can cover more neurons, and we want such improvements
-                            nc_index[i] = new_images[i+index]
+                            nc_index[i+index] = new_images[i+index]
                             nc_number += 1
                     
                     if (not improve_coverage) and (not nc_symbol):
                         # new image CANNOT cover more neurons, and we want examples cannot improve coverage
-                            nc_index[i] = new_images[i+index]
+                            nc_index[i+index] = new_images[i+index]
                             nc_number += 1
 
 
