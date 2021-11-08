@@ -67,8 +67,9 @@ MODEL_DIR = "../models/"
 MNIST = "mnist"
 CIFAR = "cifar"
 SVHN = "svhn"
+EUROSAT = "eurosat"
 
-DATASET_NAMES = [MNIST, CIFAR, SVHN]
+DATASET_NAMES = [MNIST, CIFAR, SVHN, EUROSAT]
 
 BIM = "bim"
 CW = "cw"
@@ -114,6 +115,9 @@ classifier_params[SVHN]["nb_classes"] = 10
 classifier_params[SVHN]["input_shape"] = (32, 32, 3)
 classifier_params[SVHN]["clip_values"] = (-0.5, 0.5)
 
+
+classifier_params[EUROSAT]["nb_classes"] = 10
+classifier_params[EUROSAT]["input_shape"] = (64, 64, 3)
 
 
 ## attack parameters for generating adversarial images
@@ -177,7 +181,10 @@ attack_params[PGD][SVHN] = {'eps': 8. / 255.,
                       'eps_step': 0.01,
                       'max_iter': 30
                       }
-
+attack_params[PGD][EUROSAT] = {'eps': 32. / 255.,
+                             'eps_step': 2. / 255.,
+                             'max_iter': 50
+                             }
 # use the same epsilon used in pgd
 attack_params[BIM] = {}
 attack_params[BIM][MNIST] = {'eps': .3
@@ -196,6 +203,8 @@ attack_params[FGSM][CIFAR] = {'eps': 16. / 255.
                                  }
 attack_params[FGSM][SVHN] = {'eps': 8. / 255.
                                 }
+attack_params[FGSM][EUROSAT] = {'eps': 16. / 255.
+                              }
 
 
 
@@ -309,7 +318,7 @@ if __name__ == '__main__':
     ## Load keras pretrained model for the specific dataset
     model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
     model = load_model(model_path)
-    model.summary()
+    # model.summary()
     
     logger.info("")
     logger.info("Generating Adversarial Images")

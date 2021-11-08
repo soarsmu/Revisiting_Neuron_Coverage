@@ -20,8 +20,9 @@ MODEL_DIR = "../models/"
 MNIST = "mnist"
 CIFAR = "cifar"
 SVHN = "svhn"
+EUROSAT = "eurosat"
 
-DATASET_NAMES = [MNIST, CIFAR, SVHN]
+DATASET_NAMES = [MNIST, CIFAR, SVHN, EUROSAT]
 
 BIM = "bim"
 CW = "cw"
