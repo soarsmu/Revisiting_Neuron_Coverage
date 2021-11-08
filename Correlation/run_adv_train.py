@@ -23,15 +23,15 @@ def train(gpu_id):
 if __name__=='__main__':
 
 
-    datasets = ['cifar', 'mnist', 'svhn']
+    datasets = ['cifar', 'mnist', 'svhn', 'eurosat']
     model_dict = {
                 'mnist': ['lenet1', 'lenet4', 'lenet5'],
-                'cifar': ['vgg16', 'resnet20'],
+                'cifar': ['vgg16', 'resnet20', 'resnet56'],
                 'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
+                'eurosat': ['resnet20', 'resnet56']
                 }
 
-    attack_names = ['apgd']
-
+    attack_names = ['fgsm', 'pgd', 'apgd']
 
     ### add combinations into queues
     manager = multiprocessing.Manager()

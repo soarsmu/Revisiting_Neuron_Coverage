@@ -7,6 +7,7 @@ from subprocess import call
 import warnings
 import numpy as np
 import scipy.io as sio
+from parameters import DATA_DIR
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc, roc_auc_score
@@ -69,7 +70,7 @@ def get_data(dataset='mnist'):
     :param dataset:
     :return: 
     """
-    assert dataset in ['mnist', 'cifar', 'svhn'], \
+    assert dataset in ['mnist', 'cifar', 'svhn', 'eurosat'], \
         "dataset parameter must be either 'mnist' 'cifar' or 'svhn'"
     if dataset == 'mnist':
         # the data, shuffled and split between train and test sets
@@ -82,6 +83,13 @@ def get_data(dataset='mnist'):
         (X_train, y_train), (X_test, y_test) = cifar10.load_data()
         X_train = color_preprocessing(X_train)
         X_test = color_preprocessing(X_test)
+    elif dataset == 'eurosat':
+        # the data, shuffled and split between train and test sets
+        DATA_DIR = "../data/"
+        X_train = np.load(DATA_DIR + dataset + '/benign/x_train.npy')
+        y_train = np.load(DATA_DIR + dataset + '/benign/y_train.npy')
+        X_test = np.load(DATA_DIR + dataset + '/benign/x_test.npy')
+        y_test = np.load(DATA_DIR + dataset + '/benign/y_test.npy')
     else:
         if not os.path.isfile(os.path.join(PATH_DATA, "svhn_train.mat")):
             print('Downloading SVHN train set...')

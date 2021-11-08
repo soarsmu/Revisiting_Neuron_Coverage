@@ -106,9 +106,9 @@ def adv_retrain(attack_name, dataset, model_name, nb_epochs=80, batch_size=512):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Adversarially retrain model')
-    parser.add_argument('-dataset', help="dataset to use", choices=['mnist', 'cifar', 'svhn'])
+    parser.add_argument('-dataset', help="dataset to use", choices=['mnist', 'cifar', 'svhn', 'eurosat'])
     parser.add_argument('-model', help="target model to attack",
-                        choices=['vgg16', 'resnet20', 'lenet1', 'lenet4', 'lenet5', 'svhn_model',
+                        choices=['vgg16', 'resnet20', 'resnet56', 'lenet1', 'lenet4', 'lenet5', 'svhn_model',
                                  'svhn_first', 'svhn_second'])
     parser.add_argument(
         '--batch_size', help="batch size for generating adversarial examples", type=int, default=1024)
