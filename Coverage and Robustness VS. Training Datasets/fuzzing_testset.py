@@ -3,6 +3,8 @@ import tensorflow as tf
 import os
 import argparse
 
+from tqdm import tqdm
+
 MODEL_DIR = "../models/"
 
 ####for solving some specific problems, don't care
@@ -33,30 +35,29 @@ if __name__ == '__main__':
     model = load_model(model_path)
     model_layer = len(model.layers) - 1
 
-    nc_index = {}
-    nc_number = 0
-
     store_path = 'new_test/{}/{}'.format(dataset_name, model_name)
     os.makedirs(store_path, exist_ok=True)
-    
+    new_images = []
+    for i in tqdm(range(len(x_test)), desc="transformation ......"):
+        new_images.append(mutate(x_test[i]))
+
     for order_number in range(2):
-        for i in range(5000*order_number, 5000*(order_number+1)):
-            new_image = mutate(x_test[i])
-            if i == 5000*order_number+1000 or i == 5000*order_number+2000 or i == 5000*order_number+3000 or i == 5000*order_number+4000:
-                print("-------------------------------------THIS IS {}-------------------------------------".format(i))
-            if softmax(model.predict(np.expand_dims(new_image, axis=0))).argmax(axis=-1) != softmax(model.predict(np.expand_dims(x_test[i], axis=0))).argmax(axis=-1):
-                nc_symbol = compare_nc(model, x_train, y_train, x_test, y_test, new_image, x_test[i], model_layer)
+        nc_index = {}
+        nc_number = 0
+        for i in tqdm(range(5000*order_number, 5000*(order_number+1), 500), desc="Total progress:"):
+            for index, (pred_new, pred_old) in enumerate(zip(softmax(model.predict(np.array(new_images[i:i+500]))).argmax(axis=-1), softmax(model.predict(x_test[i:i+500])).argmax(axis=-1))):
+                nc_symbol = compare_nc(model, x_train, y_train, x_test, y_test, new_images[i+index], x_test[i+index], model_layer)
                 if nc_symbol == True:
-                    nc_index[i] = new_image
+                    nc_index[i+index] = new_images[i+index]
                     nc_number += 1
 
-        print(nc_number)
+        print("Log: new image can cover more neurons: {}".format(nc_number))
         np.save(os.path.join(store_path, 'nc_index_test_{}.npy'.format(order_number)), nc_index)
 
     for order_number in range(2):
         index = np.load(os.path.join(store_path, 'nc_index_test_{}.npy'.format(order_number)), allow_pickle=True).item()
         for y, x in index.items():
-            print(y)
+            # print(y)
             x_test[y] = x
 
     np.save(os.path.join(store_path, 'x_test_new.npy'), x_test)
