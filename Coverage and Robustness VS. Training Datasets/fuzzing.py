@@ -37,8 +37,9 @@ if __name__ == '__main__':
 
     # import model
     from keras.models import load_model
-    model = load_model('../data/' + dataset_name + '_data/' + model_name + '.h5')
-    model.summary()
+    MODEL_DIR = "../models/"
+    model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
+    model = load_model(model_path)
     model_layer = len(model.layers)
 
     if os.path.exists("fuzzing/new_images.npy"):

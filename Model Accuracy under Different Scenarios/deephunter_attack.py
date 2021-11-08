@@ -4,16 +4,15 @@ import time
 import copy
 import matplotlib.pyplot as plt
 from keras import backend as K
-
-from keras import backend as K
+from keras.models import load_model
 
 import tensorflow as tf
 import os
 
 ####for solving some specific problems, don't care
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
-sess = tf.Session(config=config)
+# config = tf.ConfigProto()
+# config.gpu_options.allow_growth = True
+# sess = tf.Session(config=config)
 
 import argparse
 import os
@@ -21,6 +20,8 @@ import random
 import shutil
 import warnings
 import sys
+
+from helper import load_data
 
 
 DATA_DIR = "../data/"
@@ -292,55 +293,40 @@ def mutate(img, dataset):
     # Otherwise the mutation is failed. Line 20 in Algo 2
     return img_new
 
-# the data is in range(-.5, .5)
-def load_data(dataset_name):
-    assert (dataset_name.upper() in ['MNIST', 'CIFAR', 'SVHN'])
-    dataset_name = dataset_name.lower()
-    x_train = np.load(DATA_DIR + dataset_name + '/benign/x_train.npy')
-    y_train = np.load(DATA_DIR + dataset_name + '/benign/y_train.npy')
-    x_test = np.load(DATA_DIR + dataset_name + '/benign/x_test.npy')
-    y_test = np.load(DATA_DIR + dataset_name + '/benign/y_test.npy')
-    return x_train, y_train, x_test, y_test
-
-
 
 if __name__ == '__main__':
-
-    datasets = ['cifar']
-    model_dict = {
-                'mnist': ['lenet1', 'lenet4', 'lenet5'],
-                'cifar': ['resnet20'], # , 'resnet20'
-                'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
-                }
+    parser = argparse.ArgumentParser(description='Deephunter Attack for DNN')
+    parser.add_argument('--dataset', help="dataset used for generating adv examples", type=str, default="mnist")
+    parser.add_argument('--model', help="model architecture", type=str, default="lenet1")
+    
+    args = parser.parse_args()
                 
-    for dataset in datasets:
-        for model_name in model_dict[dataset]:
-            # load dataset
-            x_train, y_train, x_test, y_test = load_data(dataset)
+    dataset_name = args.dataset
+    model_name = args.model
 
-            # import model
-            from keras.models import load_model
+    # load dataset
+    x_train, y_train, x_test, y_test = load_data(dataset_name)
 
-            model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset, model_name)
-            model = load_model(model_path)
-            model.summary()
+    # load model
+    model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
+    model = load_model(model_path)
+    # model.summary()
 
+    x_adv = np.array([])
+    for i in range(3000):
+        new_image = mutate(x_test[i], dataset_name)
 
-            x_adv = np.array([])
-            for i in range(3000):
-                new_image = mutate(x_test[i], dataset)
-
-                if x_adv.size == 0:
-                    x_adv = np.expand_dims(new_image, axis=0)
-                else:
-                    x_adv = np.concatenate((x_adv, np.expand_dims(new_image, axis=0)), axis=0)
-            
-            ### {dataset}/{adv}/{model}/{attack}/deephunter_adv_test
-            adv_dir = "{}{}/adv/{}/{}/".format(DATA_DIR, dataset, model_name, 'deephunter')
-            if not os.path.exists(adv_dir):
-                os.makedirs(adv_dir)
-            dp_adv_path = "{}deephunter_adv_test.npy".format(adv_dir)
-            np.save(dp_adv_path, x_adv)
+        if x_adv.size == 0:
+            x_adv = np.expand_dims(new_image, axis=0)
+        else:
+            x_adv = np.concatenate((x_adv, np.expand_dims(new_image, axis=0)), axis=0)
+    
+    ### {dataset_name}/{adv}/{model}/{attack}/deephunter_adv_test
+    adv_dir = "{}{}/adv/{}/{}/".format(DATA_DIR, dataset_name, model_name, 'deephunter')
+    if not os.path.exists(adv_dir):
+        os.makedirs(adv_dir)
+    dp_adv_path = "{}deephunter_adv_test.npy".format(adv_dir)
+    np.save(dp_adv_path, x_adv)
 
 
 
