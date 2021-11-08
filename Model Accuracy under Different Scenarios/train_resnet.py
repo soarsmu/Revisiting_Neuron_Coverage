@@ -145,17 +145,17 @@ if __name__ == "__main__" :
         num_val = int(x_train.shape[0] * 0.1)
         num_test = x_train.shape[0] - num_train - num_val
         
-        mask = list(range(num_train+num_val, num_train+num_val+num_test))
-        x_test = x_train[mask]
-        y_test = y_train[mask]
-        
+        mask = list(range(num_train))
+        x_train = x_train[mask]
+        y_train = y_train[mask]
+
         mask = list(range(num_train, num_train+num_val))
         x_val = x_train[mask]
         y_val = y_train[mask]
 
-        mask = list(range(num_train))
-        x_train = x_train[mask]
-        y_train = y_train[mask]
+        mask = list(range(num_train+num_val, num_train+num_val+num_test))
+        x_test = x_train[mask]
+        y_test = y_train[mask]
 
 
     data = (x_train, y_train, x_val, y_val, x_test, y_test)
