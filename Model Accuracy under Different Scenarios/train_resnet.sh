@@ -1,7 +1,7 @@
 ## train resnet56 on cifar10
 python train_resnet.py --model_name resnet56 --dataset cifar10 --num_classes 10
 
-## train resnet56 on cifar10
+## train resnet56 on eurosat
 python train_resnet.py --model_name resnet56 --dataset eurosat --num_classes 10
 
 ## train resnet32 on eurosat
