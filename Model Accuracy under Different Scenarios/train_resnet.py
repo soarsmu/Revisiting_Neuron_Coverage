@@ -13,6 +13,8 @@ from tensorflow.keras.callbacks import LearningRateScheduler, EarlyStopping, Mod
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from sklearn.model_selection import StratifiedShuffleSplit
 
+from helper import load_data
+
 
 class Solver(object):
     """
@@ -100,7 +102,7 @@ if __name__ == "__main__" :
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", default='resnet56', type=str)
-    parser.add_argument("--dataset", default='cifar10', type=str)
+    parser.add_argument("--dataset", default='cifar', type=str)
     parser.add_argument("--num_classes", default=10, type=int)
 
     args = parser.parse_args()
@@ -108,7 +110,21 @@ if __name__ == "__main__" :
     dataset_name = args.dataset
     num_classes = args.num_classes
 
-    if dataset_name == "cifar10" or dataset_name == "cifar100":
+    if dataset_name == "cifar":
+        x_train, y_train, x_test, y_test = load_data("cifar")
+
+        num_test = int(x_test.shape[0] * 0.5)
+        num_val = x_test.shape[0] - num_test
+        
+        mask = list(range(num_val))
+        x_val = x_test[mask]
+        y_val = y_test[mask]
+
+        mask = list(range(num_val, num_val+num_test))
+        x_test = x_test[mask]
+        y_test = y_test[mask]
+    
+    elif dataset_name == "cifar100":
         
         train_ds = tfds.load(name=dataset_name, split=tfds.Split.TRAIN, batch_size=-1)
         test_ds = tfds.load(name=dataset_name, split=tfds.Split.TEST, batch_size=-1)
@@ -164,7 +180,7 @@ if __name__ == "__main__" :
     weight_decay = 1e-4
     lr = 1e-1
 
-    if dataset_name == "cifar10" or dataset_name == "cifar100":
+    if dataset_name == "cifar" or dataset_name == "cifar100":
         input_shape = (32, 32, 3)
     elif dataset_name == "eurosat":
         input_shape = (64, 64, 3)
