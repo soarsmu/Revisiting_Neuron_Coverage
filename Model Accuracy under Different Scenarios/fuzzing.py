@@ -21,26 +21,38 @@ import parameters as param
 
 
 def run_fuzzing(dataset_name, model, x_train, y_train, x_test, y_test, model_layer, folder_to_store, order_numbers=10):
+    
     for order_number in range(0, order_numbers):
-        nc_index = {}
-        nc_number = 0
-        for i in range(3000*order_number, 3000*(order_number+1)):
-            new_image = mutate(x_train[i], dataset_name)
+        
+        file_path = '{}nc_index_{}.npy'.format(folder_to_store, order_number)
+        
+        # only perform fuzzing if the file does not exist
+        if not os.path.exists(file_path) :
+            nc_index = {}
+            nc_number = 0
+            lower_bound = 3000 * order_number
+            upper_bound = 3000 * (order_number+1)
 
-            if i == 5000*order_number+1000 or i == 5000*order_number+3000:
-                print("-------------------------------------THIS IS {}-------------------------------------".format(i))
-            if softmax(model.predict(np.expand_dims(new_image, axis=0))).argmax(axis=-1) != softmax(model.predict(np.expand_dims(x_train[i], axis=0))).argmax(axis=-1):
+            if lower_bound > len(x_train): lower_bound = len(x_train)
 
-                nc_symbol = compare_nc(
-                    model, x_train, y_train, x_test, y_test, new_image, x_train[i], model_layer)
+            if upper_bound > len(x_train): upper_bound = len(x_train)
 
-                if nc_symbol == True:
-                    nc_index[i] = new_image
-                    nc_number += 1
+            for i in range(lower_bound, upper_bound):
+                new_image = mutate(x_train[i], dataset_name)
 
-        print(nc_number)
-        np.save(folder_to_store +
-                'nc_index_{}.npy'.format(order_number), nc_index)
+                if i == 5000*order_number+1000 or i == 5000*order_number+3000:
+                    print("-------------------------------------THIS IS {}-------------------------------------".format(i))
+                if softmax(model.predict(np.expand_dims(new_image, axis=0))).argmax(axis=-1) != softmax(model.predict(np.expand_dims(x_train[i], axis=0))).argmax(axis=-1):
+
+                    nc_symbol = compare_nc(
+                        model, x_train, y_train, x_test, y_test, new_image, x_train[i], model_layer)
+
+                    if nc_symbol == True:
+                        nc_index[i] = new_image
+                        nc_number += 1
+
+            print(nc_number)
+            np.save(file_path, nc_index)
 
 
 if __name__ == '__main__':
