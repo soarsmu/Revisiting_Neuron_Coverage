@@ -52,9 +52,9 @@ if __name__ == '__main__':
     #             'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
     #             }
 
-    datasets = ['cifar']
+    datasets = ['eurosat']
     model_dict = {
-        'cifar': ['resnet56']
+        'eurosat': ['resnet56']
     }
 
     # Check path
@@ -82,7 +82,7 @@ if __name__ == '__main__':
             folder_to_store = '{}{}/fuzzing/{}/'.format(param.DATA_DIR, dataset_name, model_name)
             os.makedirs(folder_to_store, exist_ok=True)
 
-            run_fuzzing(model, x_train, y_train, x_test,y_test, model_layer, folder_to_store)
+            run_fuzzing(dataset_name, model, x_train, y_train, x_test,y_test, model_layer, folder_to_store)
 
 
 
