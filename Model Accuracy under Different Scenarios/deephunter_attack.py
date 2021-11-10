@@ -1,3 +1,7 @@
+import sys
+sys.path.append('..')
+import parameters as param
+
 from mutators import Mutators
 import numpy as np
 import time
@@ -22,11 +26,6 @@ import warnings
 import sys
 
 from helper import load_data
-
-
-DATA_DIR = "../data/"
-MODEL_DIR = "../models/"
-
 
 
 warnings.filterwarnings("ignore")
@@ -304,29 +303,33 @@ if __name__ == '__main__':
     dataset_name = args.dataset
     model_name = args.model
 
-    # load dataset
-    x_train, y_train, x_test, y_test = load_data(dataset_name)
-
-    # load model
-    model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
-    model = load_model(model_path)
-    # model.summary()
-
-    x_adv = np.array([])
-    for i in range(3000):
-        new_image = mutate(x_test[i], dataset_name)
-
-        if x_adv.size == 0:
-            x_adv = np.expand_dims(new_image, axis=0)
-        else:
-            x_adv = np.concatenate((x_adv, np.expand_dims(new_image, axis=0)), axis=0)
-    
-    ### {dataset_name}/{adv}/{model}/{attack}/deephunter_adv_test
-    adv_dir = "{}{}/adv/{}/{}/".format(DATA_DIR, dataset_name, model_name, 'deephunter')
+    adv_dir = "{}{}/adv/{}/{}/".format(param.DATA_DIR,
+                                       dataset_name, model_name, 'deephunter')
     if not os.path.exists(adv_dir):
         os.makedirs(adv_dir)
-    dp_adv_path = "{}deephunter_adv_test.npy".format(adv_dir)
-    np.save(dp_adv_path, x_adv)
+    dp_adv_path = "{}x_test.npy".format(adv_dir)
+
+    # only generate deephunter adv examples if it does not exist
+    if not os.path.exists(dp_adv_path) :
+
+        # load dataset
+        x_train, y_train, x_test, y_test = load_data(dataset_name)
+
+        # load model
+        model_path = "{}{}/{}.h5".format(param.MODEL_DIR, dataset_name, model_name)
+        model = load_model(model_path)
+        # model.summary()
+
+        x_adv = np.array([])
+        for i in range(3000):
+            new_image = mutate(x_test[i], dataset_name)
+
+            if x_adv.size == 0:
+                x_adv = np.expand_dims(new_image, axis=0)
+            else:
+                x_adv = np.concatenate((x_adv, np.expand_dims(new_image, axis=0)), axis=0)
+        
+        np.save(dp_adv_path, x_adv)
 
 
 
