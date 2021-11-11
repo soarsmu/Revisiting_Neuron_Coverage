@@ -103,6 +103,8 @@ for dataset_name in DATASET_NAMES:
     attack_params[WA][dataset_name] = {}
 
 
+# TODO: recheck the parameter for EUROSAT
+
 attack_params[PGD] = {}
 attack_params[PGD][MNIST] = {'eps': .3,
                       'eps_step': .03,
@@ -132,6 +134,8 @@ attack_params[BIM][SVHN] = {'eps': 8. / 255.
 attack_params[BIM][EUROSAT] = {'eps': 16. / 255.
                              }
 
+
+# TODO: recheck the parameter for EUROSAT
 
 # use the same epsilon used in pgd
 attack_params[FGSM] = {}
