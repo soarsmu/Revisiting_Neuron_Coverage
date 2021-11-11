@@ -59,7 +59,7 @@ def customTime(*args):
     converted = utc_dt.astimezone(pytz.timezone("Singapore"))
     return converted.timetuple()
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 ## [original from FSE author] for solving some specific problems, don't care
 # config = tf.compat.v1.ConfigProto()
@@ -102,18 +102,18 @@ def call_function_by_attack_name(attack_name):
     }[attack_name]
 
 # integrate all attack method in one function and only construct graph once
-def gen_adv_data(model, x, y, attack_name, dataset_name, batch_size=2048):
+def gen_adv_data(model, x, y, attack_name, dataset_name, batch_size=1024):
     logging.getLogger().setLevel(logging.CRITICAL)
     
     classifier_param = classifier_params[dataset_name]
     classifier = TensorFlowV2Classifier(model=model, **classifier_param)
     
     attack_param = attack_params[attack_name][dataset_name]
-    if attack_name not in [param.ST] :
-        if "batch_size" not in attack_param :
-            attack_param["batch_size"] = batch_size
+    attack_param["batch_size"] = batch_size
+    
     if attack_name not in [param.FGSM, param.BIM] : ## some attacks don't have verbose parameter, e.g. bim
         attack_param["verbose"] = VERBOSE
+    
     attack = call_function_by_attack_name(attack_name)(classifier, **attack_param)
     
     data_num = x.shape[0]
@@ -191,26 +191,31 @@ if __name__ == '__main__':
     logger.info("Dataset: {}".format(dataset_name))
     logger.info("Model: {}".format(model_name))
     logger.info("Attack: {}".format(attack_name))
+    logger.info("Batch size: {}".format(args.batch_size))
 
     ## Check the accuracy of the original model on benign images
     acc = accuracy(model, x_test, y_test)
     logger.info("Model accuracy on benign images: {:.2f}%".format(acc))
 
-    ## Generate adversarial images
-    x_adv = gen_adv_data(model, x_test, y_test, attack_name,
-                    dataset_name, args.batch_size)
-    
-    ## Check the accuracy of the original model on adversarial images
-    acc = accuracy(model, x_adv, y_test)
-    logger.info("Model accuracy on adversarial images: {:.2f}%".format(acc))
-    
-    ## Save the adversarial images into external file
     x_adv_path = "{}x_test.npy".format(adv_dir)
-    np.save(x_adv_path, x_adv)
-
-    ## Note: y_test will exactly be the same with the benign y_test
-    ##       thus it's not a must to save the y_test
     y_adv_path = "{}y_test.npy".format(adv_dir)
-    np.save(y_adv_path, y_test)
 
-    logger.info("Adversarial images are saved at {}".format(adv_dir))
+    if os.path.exists(x_adv_path) and os.path.exists(y_adv_path) :
+        logger.info("Adv images are already generated at {}".format(adv_dir))
+    else :
+        ## Generate adversarial images
+        x_adv = gen_adv_data(model, x_test, y_test, attack_name,
+                        dataset_name, args.batch_size)
+        
+        ## Check the accuracy of the original model on adversarial images
+        acc = accuracy(model, x_adv, y_test)
+        logger.info("Model accuracy on adversarial images: {:.2f}%".format(acc))
+        
+        ## Save the adversarial images into external file
+        np.save(x_adv_path, x_adv)
+
+        ## Note: y_test will exactly be the same with the benign y_test
+        ##       thus it's not a must to save the y_test
+        np.save(y_adv_path, y_test)
+
+        logger.info("Adversarial images are saved at {}".format(adv_dir))
