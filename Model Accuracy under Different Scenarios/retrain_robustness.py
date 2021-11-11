@@ -28,21 +28,18 @@ from fuzzing import run_fuzzing
 
 if __name__ == '__main__':
 
-    # dataset = 'mnist'
-    # model_name = 'lenet1'
-
-    # datasets = ['mnist', 'cifar', 'svhn']
-    # model_dict = {
-    #             'mnist': ['lenet1', 'lenet4', 'lenet5'],
-    #             'cifar': ['vgg16'], # , 'resnet20'
-    #             'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
-    #             }
-    
-    datasets = ['cifar', 'eurosat']
+    datasets = ['mnist', 'cifar', 'svhn']
     model_dict = {
-        'cifar': ['resnet56'],
-        'eurosat': ['resnet20', 'resnet56'],
-    }
+                'mnist': ['lenet1', 'lenet4', 'lenet5'],
+                'cifar': ['vgg16', 'resnet20'],
+                'svhn' : ['svhn_model', 'svhn_second', 'svhn_first']
+                }
+    
+    # datasets = ['cifar', 'eurosat']
+    # model_dict = {
+    #     'cifar': ['resnet56'],
+    #     'eurosat': ['resnet20', 'resnet56'],
+    # }
     
     for dataset_name in datasets:
         for model_name in model_dict[dataset_name]:
@@ -74,11 +71,17 @@ if __name__ == '__main__':
                 x_train = np.concatenate((x_train, np.expand_dims(x, axis=0)), axis=0)
                 y_train = np.concatenate((y_train, np.expand_dims(y_train[y], axis=0)), axis=0)
 
-            # retrain model using augmented data from fuzzing
-            retrained_model = retrain(model, x_train, y_train, x_test, y_test, batch_size=256, epochs=60)
+            retrained_model_path = '{}{}/adv_{}_deephunter.h5'.format(
+                param.MODEL_DIR, dataset_name, model_name)
             
-            # save model for future usage
-            retrained_model.save('{}{}/adv_{}_deephunter.h5'.format(param.MODEL_DIR, dataset_name, model_name))
+            # only retrain if the retrained model is not exist
+            if not os.path.exists(retrained_model_path) :
+
+                # retrain model using augmented data from fuzzing
+                retrained_model = retrain(model, x_train, y_train, x_test, y_test, batch_size=256, epochs=60)
+                
+                # save model for future usage
+                retrained_model.save(retrained_model_path)
 
 
 
