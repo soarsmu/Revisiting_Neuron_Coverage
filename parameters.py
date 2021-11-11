@@ -11,6 +11,8 @@ EUROSAT = "eurosat"
 
 DATASET_NAMES = [MNIST, CIFAR, SVHN, EUROSAT]
 
+BENIGN = "benign"
+DEEPHUNTER = "deephunter"
 
 ### ATTACK NAMEs
 BIM = "bim"
@@ -114,7 +116,7 @@ attack_params[PGD][SVHN] = {'eps': 8. / 255.,
                       'eps_step': 0.01,
                       'max_iter': 30
                       }
-attack_params[PGD][EUROSAT] = {'eps': 32. / 255.,
+attack_params[PGD][EUROSAT] = {'eps': 16. / 255.,
                                'eps_step': 2. / 255.,
                                'max_iter': 50
                                }
@@ -127,6 +129,8 @@ attack_params[BIM][CIFAR] = {'eps': 16. / 255.
                                   }
 attack_params[BIM][SVHN] = {'eps': 8. / 255.
                                  }
+attack_params[BIM][EUROSAT] = {'eps': 16. / 255.
+                             }
 
 
 # use the same epsilon used in pgd
@@ -137,6 +141,6 @@ attack_params[FGSM][CIFAR] = {'eps': 16. / 255.
                                  }
 attack_params[FGSM][SVHN] = {'eps': 8. / 255.
                                 }
-attack_params[FGSM][EUROSAT] = {'eps': 32. / 255.
+attack_params[FGSM][EUROSAT] = {'eps': 16. / 255.
                               }
 
