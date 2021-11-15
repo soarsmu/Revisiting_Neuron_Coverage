@@ -124,8 +124,8 @@ if __name__ == '__main__':
     # defense_names = [param.BENIGN, param.DEEPHUNTER, param.FGSM, param.PGD, param.APGD, param.BIM, param.CW, param.DF]
     # attack_names = [param.BENIGN, param.DEEPHUNTER, param.FGSM, param.PGD, param.APGD, param.BIM, param.CW, param.DF]
     
-    defense_names = [param.BENIGN, param.DEEPHUNTER, param.FGSM, param.PGD, param.APGD]
-    attack_names = [param.BENIGN, param.DEEPHUNTER, param.FGSM, param.PGD, param.APGD, param.BIM]
+    defense_names = [param.BENIGN, param.DEEPHUNTER, param.FGSM, param.PGD ]
+    attack_names = [param.BENIGN, param.DEEPHUNTER, param.FGSM, param.PGD, param.BIM]
     
 
 
@@ -204,7 +204,7 @@ if __name__ == '__main__':
                     adv_dir = "{}{}/adv/adv_{}_{}".format(param.DATA_DIR, dataset_name, model_name, defense)
                     model_key = f"defended_{model_name}_{defense}"
                 
-                mr_rates = []
+                accuracies = []
 
                 for attack in attack_names :
                     # To-Do: to be modified after we generate using new paths.
@@ -215,15 +215,15 @@ if __name__ == '__main__':
                         adv_examples = np.load(adv_path)
                 
                     criteria = AttackEvaluate(model_defenses[model_key], x_test, y_test, adv_examples)
-                    mr = criteria.misclassification_rate()
-                    mr *= 100
+                    accuracy = 1- criteria.misclassification_rate()
+                    accuracy *= 100
 
-                    mr_rates.append(mr)
+                    accuracies.append(accuracy)
 
                 row = f"& {model_key} & "
-                for mr in mr_rates[:-1] :
-                    row += f" {mr:.2f}\% &"
-                row += f" {mr_rates[-1]:.2f}\% \\\\"
+                for accuracy in accuracies[:-1] :
+                    row += f" {accuracy:.2f}\% &"
+                row += f" {accuracies[-1]:.2f}\% \\\\"
 
                 logger.info(row)
             
