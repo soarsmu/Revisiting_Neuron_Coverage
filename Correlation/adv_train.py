@@ -77,9 +77,7 @@ def adv_retrain(attack_name, dataset, model_name, nb_epochs=80, batch_size=512, 
         classifier = TensorFlowV2Classifier(model=model, **classifier_param)
 
         attack_param = param.attack_params[attack_name][dataset_name]
-        if attack_name not in [param.ST] :
-            if "batch_size" not in attack_param :
-                attack_param["batch_size"] = batch_size
+        attack_param["batch_size"] = batch_size
         if attack_name not in [param.FGSM, param.BIM] : ## some attacks don't have verbose parameter, e.g. bim
             attack_param["verbose"] = VERBOSE
         
