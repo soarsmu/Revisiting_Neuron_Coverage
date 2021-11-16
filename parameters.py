@@ -12,7 +12,9 @@ EUROSAT = "eurosat"
 DATASET_NAMES = [MNIST, CIFAR, SVHN, EUROSAT]
 
 BENIGN = "benign"
-DEEPHUNTER = "deephunter"
+DEEPHUNTER = "fuzzing_deephunter"
+DIFFERENTIABLE = "fuzzing_differentiable"
+NONDIFFERENTIABLE = "fuzzing_nondifferentiable"
 SIMPLE = "simple"
 
 ### ATTACK NAMEs
