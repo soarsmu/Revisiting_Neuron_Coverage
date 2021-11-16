@@ -575,6 +575,87 @@ def mutate(img):
     return img_new
 
 
+def differentiable_mutate(img):
+    # ref_img is the reference image, img is the seed
+
+    transformations = [Mutators.image_pixel_change,
+                       Mutators.image_noise,
+                       Mutators.image_contrast, Mutators.image_brightness]
+
+    # these parameters need to be carefullly considered in the experiment
+    # to consider the feedbacks
+    params = []
+
+    params.append(list(range(1, 10)))  # image_pixel_change
+    params.append(list(range(1, 4)))  # image_noise
+    params.append(list(map(lambda x: x * 0.1, list(range(5, 13)))))  # image_contrast
+    params.append(list(range(-20, 20)))  # image_brightness
+
+    # differentiable transformation
+    differentiable_transformations = [0, 1, 2, 3]  # pixel value transformation, for simple attack
+
+    x, y, z = img.shape
+    random.seed(time.time())
+
+    tid = random.sample(differentiable_transformations, 1)[0]
+    # tid = 7
+    # Randomly select one transformation   Line-7 in Algorithm2
+    transformation = transformations[tid]
+    params = params[tid]
+    # Randomly select one parameter Line 10 in Algo2
+    param = random.sample(params, 1)[0]
+
+    # Perform the transformation  Line 11 in Algo2
+
+    image = np.uint8(np.round((img + 0.5) * 255))
+    img_new = transformation(copy.deepcopy(image), param)/ 255.0 - 0.5
+    # img_new = np.round(img_new)
+    img_new = img_new.reshape(img.shape)
+
+    return img_new
+
+
+def nondifferentiable_mutate(img):
+    # ref_img is the reference image, img is the seed
+
+    transformations = [Mutators.image_translation, Mutators.image_scale, 
+                        Mutators.image_shear, Mutators.image_rotation,
+                        Mutators.image_blur, ]
+
+    # these parameters need to be carefullly considered in the experiment
+    # to consider the feedbacks
+    params = []
+    params.append(list(range(-3, 3)))  # image_translation
+    params.append(list(map(lambda x: x * 0.1, list(range(7, 12)))))  # image_scale
+    params.append(list(map(lambda x: x * 0.1, list(range(-6, 6)))))  # image_shear
+    params.append(list(range(-50, 50)))  # image_rotation
+    params.append(list(range(1, 10)))  # image_blur
+
+    # non-differentiable transformation
+    non_differentiable_transformations = [0, 1, 2, 3, 4] # Affine transformation, 
+
+    x, y, z = img.shape
+    random.seed(time.time())
+
+    tid = random.sample(non_differentiable_transformations, 1)[0]
+    # tid = 7
+    # Randomly select one transformation   Line-7 in Algorithm2
+    transformation = transformations[tid]
+    params = params[tid]
+    # Randomly select one parameter Line 10 in Algo2
+    param = random.sample(params, 1)[0]
+
+    # Perform the transformation  Line 11 in Algo2
+
+    image = np.uint8(np.round((img + 0.5) * 255))
+    img_new = transformation(copy.deepcopy(image), param)/ 255.0 - 0.5
+    # img_new = np.round(img_new)
+    img_new = img_new.reshape(img.shape)
+
+    return img_new
+
+
+
 def load_data(dataset_name):
     assert dataset_name in DATASET_NAMES
     x_train = np.load(DATA_DIR + dataset_name + '/benign/x_train.npy')

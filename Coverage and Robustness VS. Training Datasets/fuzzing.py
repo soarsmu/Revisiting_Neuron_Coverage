@@ -18,7 +18,7 @@ config.gpu_options.allow_growth = True
 sess = tf.compat.v1.Session(config=config)
 
 import warnings
-from helper import load_data, softmax, compare_nc, mutate
+from helper import load_data, softmax, compare_nc, mutate, differentiable_mutate, nondifferentiable_mutate
 
 
 warnings.filterwarnings("ignore")
@@ -26,11 +26,12 @@ warnings.filterwarnings("ignore")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", default='lenet1', type=str)
+    parser.add_argument("--model", default='lenet1', type=str)
     parser.add_argument("--dataset", default='mnist', type=str)
+    parser.add_argument("--mutation", default='deephunter', type=str, choices=['deephunter', 'differentiable','nondifferentiable'])
 
     args = parser.parse_args()
-    model_name = args.model_name
+    model_name = args.model
     
     dataset_name = args.dataset
 
@@ -42,7 +43,7 @@ if __name__ == '__main__':
     model = load_model(model_path)
     model_layer = len(model.layers)
 
-    folder_to_store = '{}{}/fuzzing/{}/'.format(param.DATA_DIR, dataset_name, model_name)
+    folder_to_store = '{}{}/fuzzing_{}/{}/'.format(param.DATA_DIR, dataset_name, args.mutation, model_name)
     os.makedirs(folder_to_store, exist_ok=True)
 
     fuzzing_image_path = folder_to_store + "new_images.npy"
@@ -55,8 +56,13 @@ if __name__ == '__main__':
         new_images = []
         
         for i in tqdm(range(len(x_train))):
-            new_images.append(mutate(x_train[i]))
-            
+            if args.mutation == "deephunter" :
+                new_images.append(mutate(x_train[i]))
+            elif args.mutation == "differentiable" : 
+                new_images.append(differentiable_mutate(x_train[i]))
+            elif args.mutation == "nondifferentiable" : 
+                new_images.append(nondifferentiable_mutate(x_train[i]))
+
         np.save(fuzzing_image_path, new_images)
         print(f"Log: Save mutantions into {fuzzing_image_path}")
 
