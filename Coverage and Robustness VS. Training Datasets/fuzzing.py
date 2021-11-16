@@ -88,8 +88,20 @@ if __name__ == '__main__':
             nc_number = 0
             no_nc_number = 0
 
-            for i in tqdm(range(5000*order_number, 5000*(order_number+1), 500), desc="Total progress:"):
-                for index, (pred_new, pred_old) in enumerate(zip(softmax(model.predict(np.array(new_images[i:i+500]))).argmax(axis=-1), softmax(model.predict(x_train[i:i+500])).argmax(axis=-1))):
+            lower_bound = 5000 * order_number
+            upper_bound = 5000 * (order_number+1)
+
+            if lower_bound > len(new_images): lower_bound = len(new_images)
+
+            if upper_bound > len(new_images): upper_bound = len(new_images)
+
+            step = int((upper_bound - lower_bound) / 10)
+            for i in tqdm(range(lower_bound, upper_bound, step), desc="Total progress:"):
+
+                left_idx = i
+                right_idx = min(i + step, upper_bound)
+
+                for index, (pred_new, pred_old) in enumerate(zip(softmax(model.predict(np.array(new_images[left_idx:right_idx]))).argmax(axis=-1), softmax(model.predict(x_train[left_idx:right_idx])).argmax(axis=-1))):
                     
                     if pred_new != pred_old:
                         nc_symbol = compare_nc(model, x_train, y_train, x_test, y_test, new_images[i+index], x_train[i+index], model_layer)
