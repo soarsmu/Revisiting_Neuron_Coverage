@@ -41,7 +41,7 @@ if __name__ == '__main__':
     # import model
     model_path = "{}{}/{}.h5".format(param.MODEL_DIR, dataset_name, model_name)
     model = load_model(model_path)
-    model_layer = len(model.layers)
+    model_layer = len(model.layers) - 1
 
     folder_to_store = '{}{}/fuzzing_{}/{}/'.format(param.DATA_DIR, dataset_name, args.mutation, model_name)
     os.makedirs(folder_to_store, exist_ok=True)
