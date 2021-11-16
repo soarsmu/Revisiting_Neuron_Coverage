@@ -13,6 +13,7 @@ DATASET_NAMES = [MNIST, CIFAR, SVHN, EUROSAT]
 
 BENIGN = "benign"
 DEEPHUNTER = "deephunter"
+SIMPLE = "simple"
 
 ### ATTACK NAMEs
 BIM = "bim"
