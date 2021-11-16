@@ -1,3 +1,9 @@
+import sys
+sys.path.append('..')
+import parameters as param
+
+from keras.models import load_model
+    
 import os
 import numpy as np
 import tensorflow as tf
@@ -12,12 +18,8 @@ config.gpu_options.allow_growth = True
 sess = tf.compat.v1.Session(config=config)
 
 import warnings
-from helper import load_data, softmax, compare_nc, mutate, get_all_layers_outputs
+from helper import load_data, softmax, compare_nc, mutate
 
-import multiprocessing
-from multiprocessing import Pool
-manager = multiprocessing.Manager()
-queue = manager.Queue()
 
 warnings.filterwarnings("ignore")
 
@@ -36,15 +38,18 @@ if __name__ == '__main__':
     x_train, y_train, x_test, y_test = load_data(dataset_name)
 
     # import model
-    from keras.models import load_model
-    MODEL_DIR = "../models/"
-    model_path = "{}{}/{}.h5".format(MODEL_DIR, dataset_name, model_name)
+    model_path = "{}{}/{}.h5".format(param.MODEL_DIR, dataset_name, model_name)
     model = load_model(model_path)
     model_layer = len(model.layers)
 
-    if os.path.exists("fuzzing/new_images.npy"):
-        new_images = np.load("fuzzing/new_images.npy")
-        print("Log: Load mutantions from fuzzing/new_images.npy.")
+    folder_to_store = '{}{}/fuzzing/{}/'.format(param.DATA_DIR, dataset_name, model_name)
+    os.makedirs(folder_to_store, exist_ok=True)
+
+    fuzzing_image_path = folder_to_store + "new_images.npy"
+
+    if os.path.exists(fuzzing_image_path):
+        new_images = np.load(fuzzing_image_path)
+        print(f"Log: Load mutantions from {fuzzing_image_path}.")
     else:
         print("Log: Start do transformation in images")
         new_images = []
@@ -52,8 +57,8 @@ if __name__ == '__main__':
         for i in tqdm(range(len(x_train))):
             new_images.append(mutate(x_train[i]))
             
-        np.save("fuzzing/new_images.npy", new_images)
-        print("Log: Save mutantions into fuzzing/new_images.npy")
+        np.save(fuzzing_image_path, new_images)
+        print(f"Log: Save mutantions into {fuzzing_image_path}")
 
     print("Log: Find adversarial examples")
 
@@ -79,9 +84,11 @@ if __name__ == '__main__':
                         no_nc_number += 1
 
         print("Log: new image can cover more neurons: {}".format(nc_number))
+        print(f"Log: Save in {folder_to_store}/nc_index_{order_number}\n")
+        np.save(f'{folder_to_store}/nc_index_{order_number}.npy', nc_index)
+        
         print("Log: new image can NOT cover more neurons: {}".format(no_nc_number))
-        print("Log: Save in fuzzing/nc_index_{}, fuzzing/nc_index_{} \n\n".format(order_number, order_number))
-        np.save('fuzzing/nc_index_{}.npy'.format(order_number), nc_index)
-        np.save('fuzzing/no_nc_index_{}.npy'.format(order_number), no_nc_index)
+        print(f"Log: Save in {folder_to_store}/no_nc_index_{order_number} \n\n")
+        np.save(f'{folder_to_store}/no_nc_index_{order_number}.npy', no_nc_index)
 
         
