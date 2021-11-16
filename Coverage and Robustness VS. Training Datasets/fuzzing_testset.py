@@ -52,17 +52,21 @@ if __name__ == '__main__':
 
 
     for order_number in range(2):
-        nc_index = {}
-        nc_number = 0
-        for i in tqdm(range(5000*order_number, 5000*(order_number+1), 500), desc="Total progress:"):
-            for index, (pred_new, pred_old) in enumerate(zip(softmax(model.predict(np.array(new_images[i:i+500]))).argmax(axis=-1), softmax(model.predict(x_test[i:i+500])).argmax(axis=-1))):
-                nc_symbol = compare_nc(model, x_train, y_train, x_test, y_test, new_images[i+index], x_test[i+index], model_layer)
-                if nc_symbol == True:
-                    nc_index[i+index] = new_images[i+index]
-                    nc_number += 1
 
-        print("Log: new image can cover more neurons: {}".format(nc_number))
-        np.save(os.path.join(store_path, 'nc_index_test_{}.npy'.format(order_number)), nc_index)
+        nc_index_path = os.path.join(store_path, 'nc_index_test_{}.npy'.format(order_number))
+
+        if not os.path.exists(nc_index_path) :
+            nc_index = {}
+            nc_number = 0
+            for i in tqdm(range(5000*order_number, 5000*(order_number+1), 500), desc="Total progress:"):
+                for index, (pred_new, pred_old) in enumerate(zip(softmax(model.predict(np.array(new_images[i:i+500]))).argmax(axis=-1), softmax(model.predict(x_test[i:i+500])).argmax(axis=-1))):
+                    nc_symbol = compare_nc(model, x_train, y_train, x_test, y_test, new_images[i+index], x_test[i+index], model_layer)
+                    if nc_symbol == True:
+                        nc_index[i+index] = new_images[i+index]
+                        nc_number += 1
+
+            print("Log: new image can cover more neurons: {}".format(nc_number))
+            np.save(nc_index_path, nc_index)
 
     for order_number in range(2):
         index = np.load(os.path.join(store_path, 'nc_index_test_{}.npy'.format(order_number)), allow_pickle=True).item()
