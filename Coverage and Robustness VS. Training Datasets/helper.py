@@ -224,7 +224,8 @@ class Coverage:
                 # or in order
                 # topk = np.apply_along_axis[lambda x: top_k(layer_output, k), 1, layer_output]
                 for j in range(topk.shape[0]):
-                    pattern_set.add(tuple(topk[j]))
+                    for n in topk[j]:
+                        pattern_set.add(n)
                 begin += batch
                 end += batch
             pattern_num += len(pattern_set)

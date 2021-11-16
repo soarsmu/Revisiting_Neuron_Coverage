@@ -66,8 +66,8 @@ def evaluate_coverage(model, l, T, x_train, y_train, x_test, y_test):
     for threshold in nc.keys():
         print('NC({}): {}  activate_num: {}  total_num: {}'.format(threshold, nc[threshold], activate_num[threshold], total_num))
 
-    tknc, pattern_num, total_num6 = coverage.TKNC(l)
-    print('TKNC: {}  pattern_num: {}  total_num: {}'.format(tknc, pattern_num, total_num6))
+    tknc, pattern_num, total_num = coverage.TKNC(l)
+    print('TKNC: {}  pattern_num: {}  total_num: {}'.format(tknc, pattern_num, total_num))
     
     tknp = coverage.TKNP(l)
     print('TKNP: {}'.format(tknp))
@@ -86,7 +86,7 @@ def evaluate_coverage(model, l, T, x_train, y_train, x_test, y_test):
         # f.write('NC(0.5): {}  activate_num: {}  total_num: {} \n'.format(nc[0.5], activate_num[0.5], total_num))
         # f.write('NC(0.7): {}  activate_num: {}  total_num: {} \n'.format(nc[0.7], activate_num[0.7], total_num))
         # f.write('NC(0.9): {}  activate_num: {}  total_num: {} \n'.format(nc[0.9], activate_num[0.9], total_num))
-        f.write('TKNC: {}  pattern_num: {}  total_num: {} \n'.format(tknc, pattern_num, total_num6))
+        f.write('TKNC: {}  pattern_num: {}  total_num: {} \n'.format(tknc, pattern_num, total_num))
         f.write('TKNP: {} \n'.format(tknp))
         f.write('KMNC: {}  covered_num: {}  total_num: {} \n'.format(kmnc, covered_num, neuron_num))
         f.write('NBC: {}  l_covered_num: {}  u_covered_num: {} \n'.format(nbc, l_covered_num, u_covered_num))
@@ -178,25 +178,25 @@ def cycle(T: int):
         x_train = np.concatenate((x_train, np.expand_dims(x, axis=0)), axis=0)
         y_train = np.concatenate((y_train, np.expand_dims(y_train[y], axis=0)), axis=0)
 
-    ## Retrain the model
-    retrained_model = retrain(current_model, x_train, y_train, x_test, y_test, batch_size=128, epochs=5)
-    new_model_path = "{}{}/{}/{}/{}.h5".format(THIS_MODEL_DIR, dataset_name, model_name, is_improve, str(T))
-    retrained_model.save(new_model_path)
-
 
     # Step 4. Evaluate the current model
     ## Evaluate coverage
+    print(x_train.shape)
     print("\nEvaluate coverage ......")
-    evaluate_coverage(retrained_model, l, T, x_train, y_train, x_test, y_test)
+    evaluate_coverage(current_model, l, T, x_train, y_train, x_test, y_test)
 
     ## Evaluate robustness
     print("\nEvaluate robustness ......")
     store_path = 'new_test/{}/{}'.format(dataset_name, model_name)
     x_test_new = np.load(os.path.join(store_path, 'x_test_new.npy'),  allow_pickle=True)
-    evaluate_robustness(T, retrained_model, x_test, y_test, x_test_new)
+    evaluate_robustness(T, current_model, x_test, y_test, x_test_new)
+
+    ## Retrain the model
+    retrained_model = retrain(current_model, x_train, y_train, x_test, y_test, batch_size=128, epochs=5)
+    new_model_path = "{}{}/{}/{}/{}.h5".format(THIS_MODEL_DIR, dataset_name, model_name, is_improve, str(T))
+    retrained_model.save(new_model_path)
 
     print("Done\n")
-
 
 
 if __name__ == '__main__':
