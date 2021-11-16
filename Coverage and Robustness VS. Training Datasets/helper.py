@@ -515,9 +515,10 @@ def mutate(img):
     # tyr_num is the maximum number of trials in Algorithm 2
 
     transformations = [Mutators.image_translation, Mutators.image_scale, Mutators.image_shear, Mutators.image_rotation,
-                       Mutators.image_contrast, Mutators.image_brightness, Mutators.image_blur,
+                       Mutators.image_blur, 
                        Mutators.image_pixel_change,
-                       Mutators.image_noise]
+                       Mutators.image_noise,
+                       Mutators.image_contrast, Mutators.image_brightness]
 
     # these parameters need to be carefullly considered in the experiment
     # to consider the feedbacks
@@ -534,15 +535,19 @@ def mutate(img):
     params.append(list(map(lambda x: x * 0.1, list(range(5, 13)))))  # image_contrast
     params.append(list(range(-20, 20)))  # image_brightness
 
-    classA = [ 5, 6, 7, 8]  # pixel value transformation, for simple attack
-    classB = [0, 1, 2, 3, 4]  # Affine transformation, 
-    # A + B for Deephunter.
+    # non-differentiable transformation
+    non_differentiable_transformations = [0, 1, 2, 3, 4] # Affine transformation, 
+    
+    # differentiable transformation
+    differentiable_transformations = [5, 6, 7, 8]  # pixel value transformation, for simple attack
+    
+    # Deephunter = non_differentiable_transformations + differentiable_transformations
 
 
     x, y, z = img.shape
     random.seed(time.time())
 
-    tid = random.sample(classA + classB, 1)[0]
+    tid = random.sample(non_differentiable_transformations + differentiable_transformations, 1)[0]
     # tid = 7
     # Randomly select one transformation   Line-7 in Algorithm2
     transformation = transformations[tid]
