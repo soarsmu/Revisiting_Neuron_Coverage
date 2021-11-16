@@ -66,7 +66,10 @@ if __name__ == '__main__':
                         y_test, model_layer, folder_to_store)
             
             # load images generated from fuzzing
-            index = np.load(folder_to_store + 'nc_index_{}.npy'.format(4), allow_pickle=True).item()
+            index = np.load(folder_to_store + 'nc_index_{}.npy'.format(4), allow_pickle=True).item() 
+            # To-Do: train on all images, instead of just one.
+
+            
             for y, x in index.items():
                 x_train = np.concatenate((x_train, np.expand_dims(x, axis=0)), axis=0)
                 y_train = np.concatenate((y_train, np.expand_dims(y_train[y], axis=0)), axis=0)
