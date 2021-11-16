@@ -526,14 +526,17 @@ def mutate(img):
     params.append(list(map(lambda x: x * 0.1, list(range(7, 12)))))  # image_scale
     params.append(list(map(lambda x: x * 0.1, list(range(-6, 6)))))  # image_shear
     params.append(list(range(-50, 50)))  # image_rotation
-    params.append(list(map(lambda x: x * 0.1, list(range(5, 13)))))  # image_contrast
-    params.append(list(range(-20, 20)))  # image_brightness
     params.append(list(range(1, 10)))  # image_blur
+
+
     params.append(list(range(1, 10)))  # image_pixel_change
     params.append(list(range(1, 4)))  # image_noise
+    params.append(list(map(lambda x: x * 0.1, list(range(5, 13)))))  # image_contrast
+    params.append(list(range(-20, 20)))  # image_brightness
 
-    classA = [7, 8]  # pixel value transformation
-    classB = [0, 1, 2, 3, 4, 5, 6]  # Affine transformation
+    classA = [ 5, 6, 7, 8]  # pixel value transformation, for simple attack
+    classB = [0, 1, 2, 3, 4]  # Affine transformation, 
+    # A + B for Deephunter.
 
 
     x, y, z = img.shape
