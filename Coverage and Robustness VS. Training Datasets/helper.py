@@ -20,8 +20,9 @@ MODEL_DIR = "../models/"
 MNIST = "mnist"
 CIFAR = "cifar"
 SVHN = "svhn"
+EUROSAT = "eurosat"
 
-DATASET_NAMES = [MNIST, CIFAR, SVHN]
+DATASET_NAMES = [MNIST, CIFAR, SVHN, EUROSAT]
 
 BIM = "bim"
 CW = "cw"
@@ -515,9 +516,10 @@ def mutate(img):
     # tyr_num is the maximum number of trials in Algorithm 2
 
     transformations = [Mutators.image_translation, Mutators.image_scale, Mutators.image_shear, Mutators.image_rotation,
-                       Mutators.image_contrast, Mutators.image_brightness, Mutators.image_blur,
+                       Mutators.image_blur, 
                        Mutators.image_pixel_change,
-                       Mutators.image_noise]
+                       Mutators.image_noise,
+                       Mutators.image_contrast, Mutators.image_brightness]
 
     # these parameters need to be carefullly considered in the experiment
     # to consider the feedbacks
@@ -526,20 +528,27 @@ def mutate(img):
     params.append(list(map(lambda x: x * 0.1, list(range(7, 12)))))  # image_scale
     params.append(list(map(lambda x: x * 0.1, list(range(-6, 6)))))  # image_shear
     params.append(list(range(-50, 50)))  # image_rotation
-    params.append(list(map(lambda x: x * 0.1, list(range(5, 13)))))  # image_contrast
-    params.append(list(range(-20, 20)))  # image_brightness
     params.append(list(range(1, 10)))  # image_blur
+
+
     params.append(list(range(1, 10)))  # image_pixel_change
     params.append(list(range(1, 4)))  # image_noise
+    params.append(list(map(lambda x: x * 0.1, list(range(5, 13)))))  # image_contrast
+    params.append(list(range(-20, 20)))  # image_brightness
 
-    classA = [7, 8]  # pixel value transformation
-    classB = [0, 1, 2, 3, 4, 5, 6]  # Affine transformation
+    # non-differentiable transformation
+    non_differentiable_transformations = [0, 1, 2, 3, 4] # Affine transformation, 
+    
+    # differentiable transformation
+    differentiable_transformations = [5, 6, 7, 8]  # pixel value transformation, for simple attack
+    
+    # Deephunter = non_differentiable_transformations + differentiable_transformations
 
 
     x, y, z = img.shape
     random.seed(time.time())
 
-    tid = random.sample(classA + classB, 1)[0]
+    tid = random.sample(non_differentiable_transformations + differentiable_transformations, 1)[0]
     # tid = 7
     # Randomly select one transformation   Line-7 in Algorithm2
     transformation = transformations[tid]
@@ -565,6 +574,87 @@ def mutate(img):
     # Otherwise the mutation is failed. Line 20 in Algo 2
     # queue.put(img_new)
     return img_new
+
+
+def differentiable_mutate(img):
+    # ref_img is the reference image, img is the seed
+
+    transformations = [Mutators.image_pixel_change,
+                       Mutators.image_noise,
+                       Mutators.image_contrast, Mutators.image_brightness]
+
+    # these parameters need to be carefullly considered in the experiment
+    # to consider the feedbacks
+    params = []
+
+    params.append(list(range(1, 10)))  # image_pixel_change
+    params.append(list(range(1, 4)))  # image_noise
+    params.append(list(map(lambda x: x * 0.1, list(range(5, 13)))))  # image_contrast
+    params.append(list(range(-20, 20)))  # image_brightness
+
+    # differentiable transformation
+    differentiable_transformations = [0, 1, 2, 3]  # pixel value transformation, for simple attack
+
+    x, y, z = img.shape
+    random.seed(time.time())
+
+    tid = random.sample(differentiable_transformations, 1)[0]
+    # tid = 7
+    # Randomly select one transformation   Line-7 in Algorithm2
+    transformation = transformations[tid]
+    params = params[tid]
+    # Randomly select one parameter Line 10 in Algo2
+    param = random.sample(params, 1)[0]
+
+    # Perform the transformation  Line 11 in Algo2
+
+    image = np.uint8(np.round((img + 0.5) * 255))
+    img_new = transformation(copy.deepcopy(image), param)/ 255.0 - 0.5
+    # img_new = np.round(img_new)
+    img_new = img_new.reshape(img.shape)
+
+    return img_new
+
+
+def nondifferentiable_mutate(img):
+    # ref_img is the reference image, img is the seed
+
+    transformations = [Mutators.image_translation, Mutators.image_scale, 
+                        Mutators.image_shear, Mutators.image_rotation,
+                        Mutators.image_blur, ]
+
+    # these parameters need to be carefullly considered in the experiment
+    # to consider the feedbacks
+    params = []
+    params.append(list(range(-3, 3)))  # image_translation
+    params.append(list(map(lambda x: x * 0.1, list(range(7, 12)))))  # image_scale
+    params.append(list(map(lambda x: x * 0.1, list(range(-6, 6)))))  # image_shear
+    params.append(list(range(-50, 50)))  # image_rotation
+    params.append(list(range(1, 10)))  # image_blur
+
+    # non-differentiable transformation
+    non_differentiable_transformations = [0, 1, 2, 3, 4] # Affine transformation, 
+
+    x, y, z = img.shape
+    random.seed(time.time())
+
+    tid = random.sample(non_differentiable_transformations, 1)[0]
+    # tid = 7
+    # Randomly select one transformation   Line-7 in Algorithm2
+    transformation = transformations[tid]
+    params = params[tid]
+    # Randomly select one parameter Line 10 in Algo2
+    param = random.sample(params, 1)[0]
+
+    # Perform the transformation  Line 11 in Algo2
+
+    image = np.uint8(np.round((img + 0.5) * 255))
+    img_new = transformation(copy.deepcopy(image), param)/ 255.0 - 0.5
+    # img_new = np.round(img_new)
+    img_new = img_new.reshape(img.shape)
+
+    return img_new
+
 
 
 def load_data(dataset_name):

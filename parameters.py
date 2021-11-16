@@ -7,9 +7,13 @@ MODEL_DIR = "../models/"
 MNIST = "mnist"
 CIFAR = "cifar"
 SVHN = "svhn"
+EUROSAT = "eurosat"
 
-DATASET_NAMES = [MNIST, CIFAR, SVHN]
+DATASET_NAMES = [MNIST, CIFAR, SVHN, EUROSAT]
 
+BENIGN = "benign"
+DEEPHUNTER = "deephunter"
+SIMPLE = "simple"
 
 ### ATTACK NAMEs
 BIM = "bim"
@@ -57,7 +61,8 @@ classifier_params[SVHN]["nb_classes"] = 10
 classifier_params[SVHN]["input_shape"] = (32, 32, 3)
 classifier_params[SVHN]["clip_values"] = (-0.5, 0.5)
 
-
+classifier_params[EUROSAT]["nb_classes"] = 10
+classifier_params[EUROSAT]["input_shape"] = (64, 64, 3)
 
 ### ATTACK PARAMETERS
 attack_params = {}
@@ -99,6 +104,8 @@ for dataset_name in DATASET_NAMES:
     attack_params[WA][dataset_name] = {}
 
 
+# TODO: recheck the parameter for EUROSAT
+
 attack_params[PGD] = {}
 attack_params[PGD][MNIST] = {'eps': .3,
                       'eps_step': .03,
@@ -112,6 +119,10 @@ attack_params[PGD][SVHN] = {'eps': 8. / 255.,
                       'eps_step': 0.01,
                       'max_iter': 30
                       }
+attack_params[PGD][EUROSAT] = {'eps': 16. / 255.,
+                               'eps_step': 2. / 255.,
+                               'max_iter': 50
+                               }
 
 # use the same epsilon used in pgd
 attack_params[BIM] = {}
@@ -121,7 +132,11 @@ attack_params[BIM][CIFAR] = {'eps': 16. / 255.
                                   }
 attack_params[BIM][SVHN] = {'eps': 8. / 255.
                                  }
+attack_params[BIM][EUROSAT] = {'eps': 16. / 255.
+                             }
 
+
+# TODO: recheck the parameter for EUROSAT
 
 # use the same epsilon used in pgd
 attack_params[FGSM] = {}
@@ -131,5 +146,6 @@ attack_params[FGSM][CIFAR] = {'eps': 16. / 255.
                                  }
 attack_params[FGSM][SVHN] = {'eps': 8. / 255.
                                 }
-
+attack_params[FGSM][EUROSAT] = {'eps': 16. / 255.
+                              }
 

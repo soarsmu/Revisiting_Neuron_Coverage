@@ -1,7 +1,7 @@
 import tensorflow_datasets as tfds
 import numpy as np
 import os
-
+import argparse
 
 DATA_DIR = "../data/"
 
@@ -16,10 +16,14 @@ def convert_label_to_one_hot_encoding(index_labels):
 
 if __name__ == "__main__":
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", default='eurosat', type=str)
+    args = parser.parse_args()
+
     # please check this link to browse more datasets
     # https://www.tensorflow.org/datasets/catalog/fashion_mnist
     # choices = ["fashion_mnist", "eurosat", "oxford_flowers102", "mnist", "cifar10"]
-    dataset_name = "eurosat"
+    dataset_name = args.dataset
 
     # batch_size=-1 to get the full dataset in NumPy arrays from the returned tf.Tensor object
     if dataset_name == "fashion_mnist" or dataset_name == "oxford_flowers102":

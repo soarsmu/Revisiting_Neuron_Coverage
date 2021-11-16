@@ -227,7 +227,7 @@ class Coverage:
         self.TKNP(layers, batch=batch)
 
 
-def mutate(img, dataset):
+def simple_mutate(img, dataset):
     # ref_img is the reference image, img is the seed
 
     # cl means the current state of transformation
@@ -239,32 +239,22 @@ def mutate(img, dataset):
 
     # tyr_num is the maximum number of trials in Algorithm 2
 
-    transformations = [Mutators.image_translation, Mutators.image_scale, Mutators.image_shear, Mutators.image_rotation,
-                       Mutators.image_contrast, Mutators.image_brightness, Mutators.image_blur,
-                       Mutators.image_pixel_change,
+    transformations = [Mutators.image_pixel_change,
                        Mutators.image_noise]
 
     # these parameters need to be carefullly considered in the experiment
     # to consider the feedbacks
     params = []
-    params.append(list(range(-3, 3)))  # image_translation
-    params.append(list(map(lambda x: x * 0.1, list(range(7, 12)))))  # image_scale
-    params.append(list(map(lambda x: x * 0.1, list(range(-6, 6)))))  # image_shear
-    params.append(list(range(-50, 50)))  # image_rotation
-    params.append(list(map(lambda x: x * 0.1, list(range(5, 13)))))  # image_contrast
-    params.append(list(range(-20, 20)))  # image_brightness
-    params.append(list(range(1, 10)))  # image_blur
     params.append(list(range(1, 10)))  # image_pixel_change
     params.append(list(range(1, 4)))  # image_noise
 
-    classA = [7, 8]  # pixel value transformation
-    classB = [0, 1, 2, 3, 4, 5, 6]  # Affine transformation
-
+    classA = [0, 1]  # pixel value transformation
+    
 
     x, y, z = img.shape
     random.seed(time.time())
 
-    tid = random.sample(classA + classB, 1)[0]
+    tid = random.sample(classA, 1)[0]
     # tid = 2
     # Randomly select one transformation   Line-7 in Algorithm2
     transformation = transformations[tid]
@@ -294,7 +284,7 @@ def mutate(img, dataset):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Deephunter Attack for DNN')
+    parser = argparse.ArgumentParser(description='Simple Attack for DNN')
     parser.add_argument('--dataset', help="dataset used for generating adv examples", type=str, default="mnist")
     parser.add_argument('--model', help="model architecture", type=str, default="lenet1")
     
@@ -304,13 +294,13 @@ if __name__ == '__main__':
     model_name = args.model
 
     adv_dir = "{}{}/adv/{}/{}/".format(param.DATA_DIR,
-                                       dataset_name, model_name, 'deephunter')
+                                       dataset_name, model_name, 'simple')
     if not os.path.exists(adv_dir):
         os.makedirs(adv_dir)
-    dp_adv_path = "{}x_test.npy".format(adv_dir)
+    adv_path = "{}x_test.npy".format(adv_dir)
 
     # only generate deephunter adv examples if it does not exist
-    if not os.path.exists(dp_adv_path) :
+    if not os.path.exists(adv_path) :
 
         # load dataset
         x_train, y_train, x_test, y_test = load_data(dataset_name)
@@ -322,14 +312,14 @@ if __name__ == '__main__':
 
         x_adv = np.array([])
         for i in range(3000):
-            new_image = mutate(x_test[i], dataset_name)
+            new_image = simple_mutate(x_test[i], dataset_name)
 
             if x_adv.size == 0:
                 x_adv = np.expand_dims(new_image, axis=0)
             else:
                 x_adv = np.concatenate((x_adv, np.expand_dims(new_image, axis=0)), axis=0)
         
-        np.save(dp_adv_path, x_adv)
+        np.save(adv_path, x_adv)
 
 
 
