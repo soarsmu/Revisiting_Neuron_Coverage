@@ -30,6 +30,11 @@ if __name__ == '__main__':
     model_name = args.model
     dataset_name = args.dataset
 
+    print("Fuzzing on test data ....")
+    print("Dataset: ", dataset_name)
+    print("Model: ", model_name)
+    print("Mutation: ", args.mutation)
+
     # load dataset
     x_train, y_train, x_test, y_test = load_data(dataset_name)
 
