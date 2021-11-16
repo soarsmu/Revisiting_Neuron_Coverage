@@ -69,8 +69,10 @@ if __name__ == '__main__':
         nc_index_path = f'{folder_to_store}/nc_index_{order_number}.npy'
         no_nc_index_path = f'{folder_to_store}/no_nc_index_{order_number}.npy'
 
-        if not (os.path.exists(nc_index_path) and os.path.exists(no_nc_index_path)) :
-
+        if os.path.exists(nc_index_path) and os.path.exists(no_nc_index_path) :
+            print(f"Log: Images are already generated in {folder_to_store}/nc_index_{order_number}\n")
+            print(f"Log: Images are already generated in {folder_to_store}/no_nc_index_{order_number} \n\n")
+        else :
             nc_index = {}
             no_nc_index = {}
             nc_number = 0
