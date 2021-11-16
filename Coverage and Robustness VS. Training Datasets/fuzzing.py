@@ -63,32 +63,38 @@ if __name__ == '__main__':
     print("Log: Find adversarial examples")
 
     for order_number in range(10):
-        nc_index = {}
-        no_nc_index = {}
-        nc_number = 0
-        no_nc_number = 0
 
         print("Log: order_number: {}".format(order_number))
-        
-        for i in tqdm(range(5000*order_number, 5000*(order_number+1), 500), desc="Total progress:"):
-            for index, (pred_new, pred_old) in enumerate(zip(softmax(model.predict(np.array(new_images[i:i+500]))).argmax(axis=-1), softmax(model.predict(x_train[i:i+500])).argmax(axis=-1))):
-                
-                if pred_new != pred_old:
-                    nc_symbol = compare_nc(model, x_train, y_train, x_test, y_test, new_images[i+index], x_train[i+index], model_layer)
-                    if nc_symbol == True:
-                        # new image can cover more neurons
-                        nc_index[i+index] = new_images[i+index]
-                        nc_number += 1
-                    else:
-                        no_nc_index[i+index] = new_images[i+index]
-                        no_nc_number += 1
 
-        print("Log: new image can cover more neurons: {}".format(nc_number))
-        print(f"Log: Save in {folder_to_store}/nc_index_{order_number}\n")
-        np.save(f'{folder_to_store}/nc_index_{order_number}.npy', nc_index)
-        
-        print("Log: new image can NOT cover more neurons: {}".format(no_nc_number))
-        print(f"Log: Save in {folder_to_store}/no_nc_index_{order_number} \n\n")
-        np.save(f'{folder_to_store}/no_nc_index_{order_number}.npy', no_nc_index)
+        nc_index_path = f'{folder_to_store}/nc_index_{order_number}.npy'
+        no_nc_index_path = f'{folder_to_store}/no_nc_index_{order_number}.npy'
+
+        if not (os.path.exists(nc_index_path) and os.path.exists(no_nc_index_path)) :
+
+            nc_index = {}
+            no_nc_index = {}
+            nc_number = 0
+            no_nc_number = 0
+
+            for i in tqdm(range(5000*order_number, 5000*(order_number+1), 500), desc="Total progress:"):
+                for index, (pred_new, pred_old) in enumerate(zip(softmax(model.predict(np.array(new_images[i:i+500]))).argmax(axis=-1), softmax(model.predict(x_train[i:i+500])).argmax(axis=-1))):
+                    
+                    if pred_new != pred_old:
+                        nc_symbol = compare_nc(model, x_train, y_train, x_test, y_test, new_images[i+index], x_train[i+index], model_layer)
+                        if nc_symbol == True:
+                            # new image can cover more neurons
+                            nc_index[i+index] = new_images[i+index]
+                            nc_number += 1
+                        else:
+                            no_nc_index[i+index] = new_images[i+index]
+                            no_nc_number += 1
+
+            print("Log: new image can cover more neurons: {}".format(nc_number))
+            print(f"Log: Save in {folder_to_store}/nc_index_{order_number}\n")
+            np.save(nc_index_path, nc_index)
+            
+            print("Log: new image can NOT cover more neurons: {}".format(no_nc_number))
+            print(f"Log: Save in {folder_to_store}/no_nc_index_{order_number} \n\n")
+            np.save(no_nc_index_path, no_nc_index)
 
         
