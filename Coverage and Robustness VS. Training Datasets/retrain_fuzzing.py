@@ -38,7 +38,7 @@ if __name__ == '__main__':
     print("Model: ", model_name)
     print("Mutation: ", args.mutation)
 
-    retrained_model_path = f'{param.MODEL_DIR}{dataset_name}/adv_{model_name}_{args.mutation}.h5'
+    retrained_model_path = f'{param.MODEL_DIR}{dataset_name}/adv_{model_name}_fuzzing_{args.mutation}.h5'
     
     if not os.path.exists(retrained_model_path) :
 
@@ -57,5 +57,5 @@ if __name__ == '__main__':
                 x_train = np.concatenate((x_train, np.expand_dims(x, axis=0)), axis=0)
                 y_train = np.concatenate((y_train, np.expand_dims(y_train[y], axis=0)), axis=0)
 
-        retrained_model = retrain(model, x_train, y_train, x_test, y_test, batch_size=32, epochs=60)
+        retrained_model = retrain(model, x_train, y_train, x_test, y_test, batch_size=512, epochs=60)
         retrained_model.save(retrained_model_path)
