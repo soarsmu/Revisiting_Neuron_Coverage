@@ -117,15 +117,15 @@ if __name__ == '__main__':
             'mnist': ['lenet5'],
             'cifar': ['vgg16'],
             'svhn' : ['svhn_second'],
-            # 'eurosat': ['resnet56']
+            'eurosat': ['resnet56']
             }
 
     logger.info("\nGenerating Table 3. Misclassification rates for defended models")
     # defense_names = [param.BENIGN, param.DEEPHUNTER, param.FGSM, param.PGD, param.APGD, param.BIM, param.CW, param.DF]
     # attack_names = [param.BENIGN, param.DEEPHUNTER, param.FGSM, param.PGD, param.APGD, param.BIM, param.CW, param.DF]
     
-    defense_names = [param.DIFFERENTIABLE, param.NONDIFFERENTIABLE, param.DEEPHUNTER, param.FGSM, param.PGD ]
-    attack_names = [param.DIFFERENTIABLE, param.NONDIFFERENTIABLE, param.DEEPHUNTER, param.FGSM, param.PGD]
+    defense_names = [param.BENIGN, param.DIFFERENTIABLE, param.NONDIFFERENTIABLE, param.DEEPHUNTER, param.FGSM, param.PGD ]
+    attack_names = [param.BENIGN, param.DIFFERENTIABLE, param.NONDIFFERENTIABLE, param.DEEPHUNTER, param.FGSM, param.PGD]
     metric = "accuracy"
     
 
@@ -175,6 +175,9 @@ if __name__ == '__main__':
 
         for model_name in model_dict[dataset_name]:
 
+            if metric == "accuracy" :
+                baseline_accuracies= {}
+
             # model_defenses = {}
             
             '''load models for defense'''
@@ -205,7 +208,7 @@ if __name__ == '__main__':
                     baseline_adv_dir = "{}{}/adv/{}".format(param.DATA_DIR, dataset_name, model_name)
 
                 accuracies = []
-                baseline_accuracies = []
+                diffs = []
                 mcr = [] # missclassification rates
 
                 for attack in attack_names :
@@ -222,16 +225,16 @@ if __name__ == '__main__':
 
                     mcr.append(mr)
 
-                    accuracy = 100.0 - mr
-                    accuracies.append(accuracy)
-
                     if metric == "accuracy" :
-                        baseline_adv_path = "{}/{}/x_test.npy".format(baseline_adv_dir, attack)
-                        baseline_adv_examples = np.load(baseline_adv_path)
-                        criteria = AttackEvaluate(baseline_model, x_test, y_test, baseline_adv_examples)
-                        baseline_accuracy = 100 * (1 - criteria.misclassification_rate())
-                        baseline_accuracies.append(baseline_accuracy)
 
+                        accuracy = 100.0 - mr
+                        accuracies.append(accuracy)
+                        
+                        if defense == param.BENIGN:
+                            baseline_accuracies[attack] = accuracy
+                            diffs.append(0.0)
+                        else :
+                            diffs.append(accuracy-baseline_accuracies[attack])
                 
                 row = f"& "
                 # row = f"& {model_key} & "
@@ -240,14 +243,12 @@ if __name__ == '__main__':
                         row += f" {mc:.2f}\% &"
                     row += f" {mcr[-1]:.2f}\% \\\\"
                 elif metric == "accuracy" :
-                    for accuracy, baseline_accuracy in zip(accuracies[:-1], baseline_accuracies[:-1]) :
-                        diff = accuracy - baseline_accuracy
+                    for accuracy,  diff in zip(accuracies[:-1], diffs[:-1]) :
                         sign = "+" if diff >= 0 else "" 
                         row += f" {accuracy:.2f}\%({sign}{diff:.2f}\%) &"
                     
                     accuracy = accuracies[-1]
-                    baseline_accuracy = baseline_accuracies[-1]
-                    diff = accuracy - baseline_accuracy
+                    diff = diffs[-1]
                     sign = "+" if diff > 0 else "" 
                     row += f" {accuracy:.2f}\%({sign}{diff:.2f}\%) \\\\"
                 else :
