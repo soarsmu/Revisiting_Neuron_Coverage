@@ -56,8 +56,9 @@ if __name__ == '__main__':
         for i in range(order_number):
             index = np.load(f'{folder_to_store}/nc_index_{i}.npy', allow_pickle=True).item()
             
-            x_train = np.append(x_train, np.array(list(index.values())), axis=0)
-            y_train = np.append(y_train, y_train[np.array(list(index.keys()))], axis=0)
+            if len(list(index.keys())) > 0 :
+                x_train = np.append(x_train, np.array(list(index.values())), axis=0)
+                y_train = np.append(y_train, y_train[np.array(list(index.keys()))], axis=0)
             
         print("Start retraining ...")
 
