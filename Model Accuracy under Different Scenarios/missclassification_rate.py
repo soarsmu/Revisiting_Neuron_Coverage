@@ -198,7 +198,14 @@ if __name__ == '__main__':
                     
                 model_defense = load_model(model_path)
 
+                if metric == "accuracy" :
+                    baseline_model_path = "{}{}/{}.h5".format(param.MODEL_DIR, dataset_name, model_name)
+                    baseline_model = load_model(model_path)
+
+                    baseline_adv_dir = "{}{}/adv/{}".format(param.DATA_DIR, dataset_name, model_name)
+
                 accuracies = []
+                baseline_accuracies = []
                 mcr = [] # missclassification rates
 
                 for attack in attack_names :
@@ -217,6 +224,14 @@ if __name__ == '__main__':
 
                     accuracy = 100.0 - mr
                     accuracies.append(accuracy)
+
+                    if metric == "accuracy" :
+                        baseline_adv_path = "{}/{}/x_test.npy".format(baseline_adv_dir, attack)
+                        baseline_adv_examples = np.load(baseline_adv_path)
+                        criteria = AttackEvaluate(baseline_model, x_test, y_test, baseline_adv_examples)
+                        baseline_accuracy = 100 * (1 - criteria.misclassification_rate())
+                        baseline_accuracies.append(baseline_accuracy)
+
                 
                 row = f"& "
                 # row = f"& {model_key} & "
@@ -224,10 +239,19 @@ if __name__ == '__main__':
                     for mc in mcr[:-1] :
                         row += f" {mc:.2f}\% &"
                     row += f" {mcr[-1]:.2f}\% \\\\"
+                elif metric == "accuracy" :
+                    for accuracy, baseline_accuracy in zip(accuracies[:-1], baseline_accuracies[:-1]) :
+                        diff = accuracy - baseline_accuracy
+                        sign = "+" if diff >= 0 else "" 
+                        row += f" {accuracy:.2f}\%({sign}{diff:.2f}\%) &"
+                    
+                    accuracy = accuracies[-1]
+                    baseline_accuracy = baseline_accuracies[-1]
+                    diff = accuracy - baseline_accuracy
+                    sign = "+" if diff > 0 else "" 
+                    row += f" {accuracy:.2f}\%({sign}{diff:.2f}\%) \\\\"
                 else :
-                    for accuracy in accuracies[:-1] :
-                        row += f" {accuracy:.2f}\% &"
-                    row += f" {accuracies[-1]:.2f}\% \\\\"
+                    raise ValueError("Undefined metric")
 
                 logger.info(row)
             
