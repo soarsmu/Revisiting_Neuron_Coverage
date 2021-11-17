@@ -92,12 +92,10 @@ if __name__ == '__main__':
     logger = logging.getLogger("missclassification_rate")
         
     
-    datasets = ['mnist', 'cifar', 'svhn', 'eurosat']
-    
-    
     ##
     #  Use this for generating table 2
-    # 
+    ##
+     
     # model_dict = {
     #         'mnist': ['lenet1', 'lenet4', 'lenet5'],
     #         'cifar': ['vgg16', 'resnet20', 'resnet56'],
@@ -107,37 +105,41 @@ if __name__ == '__main__':
 
     # logger.info("\nGenerating Table 2. Misclassification rates for original models")
     # defense_names = [param.BENIGN]
-    # attack_names = [param.BENIGN, param.DEEPHUNTER, param.FGSM, param.PGD, param.APGD, param.CW, param.BIM, param.DF]
+    # attack_names = [param.DIFFERENTIABLE, param.NONDIFFERENTIABLE, param.DEEPHUNTER, param.FGSM, param.PGD]
+    # metric = "missclassification_rate"
     
    
     ##
     #  Use this for generating table 3
-    # 
+    ## 
+    
     model_dict = {
             'mnist': ['lenet5'],
             'cifar': ['vgg16'],
             'svhn' : ['svhn_second'],
-            'eurosat': ['resnet56']
+            # 'eurosat': ['resnet56']
             }
 
     logger.info("\nGenerating Table 3. Misclassification rates for defended models")
     # defense_names = [param.BENIGN, param.DEEPHUNTER, param.FGSM, param.PGD, param.APGD, param.BIM, param.CW, param.DF]
     # attack_names = [param.BENIGN, param.DEEPHUNTER, param.FGSM, param.PGD, param.APGD, param.BIM, param.CW, param.DF]
     
-    defense_names = [param.BENIGN, param.DEEPHUNTER, param.FGSM, param.PGD ]
-    attack_names = [param.BENIGN, param.DEEPHUNTER, param.FGSM, param.PGD, param.BIM]
+    defense_names = [param.DIFFERENTIABLE, param.NONDIFFERENTIABLE, param.DEEPHUNTER, param.FGSM, param.PGD ]
+    attack_names = [param.DIFFERENTIABLE, param.NONDIFFERENTIABLE, param.DEEPHUNTER, param.FGSM, param.PGD]
+    metric = "accuracy"
     
 
 
     # Check models and adv examples 
     # to ensure that we can load models and adv examples
 
-    for dataset_name in datasets:
+    for dataset_name in model_dict.keys():
 
         for model_name in model_dict[dataset_name]:
 
-            '''check models for defense'''
             for defense in defense_names :
+    
+                '''check models for defense'''
                 if defense == param.BENIGN:
                     ### model path for benign model
                     model_path = "{}{}/{}.h5".format(param.MODEL_DIR, dataset_name, model_name)
@@ -148,11 +150,7 @@ if __name__ == '__main__':
                 if not os.path.exists(model_path) :
                     raise ValueError(f"{model_path} model does not exist")
                 
-            
-            '''check dataset and adv examples'''
-            for defense in defense_names :
-                
-                defended_model_dir = ""
+                '''check dataset and adv examples'''
                 if defense == param.BENIGN:
                     defended_model_dir = "{}{}/adv/{}".format(param.DATA_DIR, dataset_name, model_name)
                 else :
@@ -167,44 +165,41 @@ if __name__ == '__main__':
                         if not os.path.exists(adv_path) :
                             raise ValueError(f"{adv_path} adv examples do not exist")
                 
-    
+                
     
     ### RUN
-    
-    for dataset_name in datasets:
+    for dataset_name in model_dict.keys():
 
         ### load benign dataset
         x_train, y_train, x_test, y_test = load_data(dataset_name)
 
         for model_name in model_dict[dataset_name]:
 
-            '''load models for defense'''
-            model_defenses = {}
-            for defense in defense_names :
-                if defense == param.BENIGN:
-                    ### model path for benign model
-                    model_path = "{}{}/{}.h5".format(param.MODEL_DIR, dataset_name, model_name)
-                    model_key = f"benign_{model_name}"
-                else :
-                    ### model path for adversarially trained model
-                    model_path = "{}{}/adv_{}_{}.h5".format(param.MODEL_DIR, dataset_name, model_name, defense)
-                    model_key = f"defended_{model_name}_{defense}"
-
-                model_defenses[model_key] = load_model(model_path)
-
+            # model_defenses = {}
             
+            '''load models for defense'''
             '''check dataset and adv examples'''
             for defense in defense_names :
                 
                 adv_dir = ""
                 if defense == param.BENIGN:
+                    
                     adv_dir = "{}{}/adv/{}".format(param.DATA_DIR, dataset_name, model_name)
-                    model_key = f"benign_{model_name}"
+                    
+                    ### model path for benign model
+                    model_path = "{}{}/{}.h5".format(param.MODEL_DIR, dataset_name, model_name)
+                    
                 else :
                     adv_dir = "{}{}/adv/adv_{}_{}".format(param.DATA_DIR, dataset_name, model_name, defense)
-                    model_key = f"defended_{model_name}_{defense}"
-                
+
+                    ### model path for adversarially trained model
+                    model_path = "{}{}/adv_{}_{}.h5".format(param.MODEL_DIR, dataset_name, model_name, defense)
+                  
+                    
+                model_defense = load_model(model_path)
+
                 accuracies = []
+                mcr = [] # missclassification rates
 
                 for attack in attack_names :
                     # To-Do: to be modified after we generate using new paths.
@@ -214,16 +209,25 @@ if __name__ == '__main__':
                         adv_path = "{}/{}/x_test.npy".format(adv_dir, attack)
                         adv_examples = np.load(adv_path)
                 
-                    criteria = AttackEvaluate(model_defenses[model_key], x_test, y_test, adv_examples)
-                    accuracy = 1- criteria.misclassification_rate()
-                    accuracy *= 100
+                    criteria = AttackEvaluate(model_defense, x_test, y_test, adv_examples)
+                    mr = criteria.misclassification_rate()
+                    mr *= 100
 
+                    mcr.append(mr)
+
+                    accuracy = 100.0 - mr
                     accuracies.append(accuracy)
-
-                row = f"& {model_key} & "
-                for accuracy in accuracies[:-1] :
-                    row += f" {accuracy:.2f}\% &"
-                row += f" {accuracies[-1]:.2f}\% \\\\"
+                
+                row = f"& "
+                # row = f"& {model_key} & "
+                if metric == "missclassification_rate" :
+                    for mc in mcr[:-1] :
+                        row += f" {mc:.2f}\% &"
+                    row += f" {mcr[-1]:.2f}\% \\\\"
+                else :
+                    for accuracy in accuracies[:-1] :
+                        row += f" {accuracy:.2f}\% &"
+                    row += f" {accuracies[-1]:.2f}\% \\\\"
 
                 logger.info(row)
             
