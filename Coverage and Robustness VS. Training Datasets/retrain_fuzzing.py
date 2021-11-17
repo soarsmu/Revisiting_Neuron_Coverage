@@ -26,6 +26,7 @@ if __name__ == '__main__':
     parser.add_argument("--dataset", default='mnist', type=str)
     parser.add_argument("--order_number", default=10, type=int)
     parser.add_argument("--mutation", default='deephunter', type=str, choices=['deephunter', 'differentiable','nondifferentiable'])
+    parser.add_argument("--batch_size", default=128, type=int)
 
     args = parser.parse_args()
 
@@ -37,6 +38,7 @@ if __name__ == '__main__':
     print("Dataset: ", dataset_name)
     print("Model: ", model_name)
     print("Mutation: ", args.mutation)
+    print("Batch size: ", args.batch_size)
 
     retrained_model_path = f'{param.MODEL_DIR}{dataset_name}/adv_{model_name}_fuzzing_{args.mutation}.h5'
     
@@ -53,9 +55,11 @@ if __name__ == '__main__':
 
         for i in range(order_number):
             index = np.load(f'{folder_to_store}/nc_index_{i}.npy', allow_pickle=True).item()
-            for y, x in index.items():
-                x_train = np.concatenate((x_train, np.expand_dims(x, axis=0)), axis=0)
-                y_train = np.concatenate((y_train, np.expand_dims(y_train[y], axis=0)), axis=0)
+            
+            x_train = np.append(x_train, np.array(list(index.values())), axis=0)
+            y_train = np.append(y_train, y_train[np.array(list(index.keys()))], axis=0)
+            
+        print("Start retraining ...")
 
-        retrained_model = retrain(model, x_train, y_train, x_test, y_test, batch_size=512, epochs=60)
+        retrained_model = retrain(model, x_train, y_train, x_test, y_test, batch_size=args.batch_size, epochs=60)
         retrained_model.save(retrained_model_path)
