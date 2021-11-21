@@ -68,7 +68,7 @@ if __name__ == '__main__':
             v = func(mnist_dic[metric_2], mnist_dic[metric_1])
         #     print(v)
         # print('---------------------------------------------')
-            print('The Kendallta between {} and {} is {}'.format(metric_2, metric_1, v))
+            print('The Kendallta between {} and {} is {:.1f}'.format(metric_2, metric_1, v))
 
 
 

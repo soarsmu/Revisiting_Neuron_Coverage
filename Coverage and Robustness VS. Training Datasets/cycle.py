@@ -1,5 +1,3 @@
-
-
 from helper import load_data, mutate, softmax, compare_nc, retrain
 from helper import Coverage
 from helper import AttackEvaluate
@@ -93,11 +91,17 @@ def evaluate_coverage(model, l, T, x_train, y_train, x_test, y_test):
         f.write('SNAC: {} \n'.format(snac))
 
 
+# CUDA_VISIBLE_DEVICES=0 python cycle.py --model_name lenet4 --dataset mnist --improve_coverage &
+# CUDA_VISIBLE_DEVICES=0 python cycle.py --model_name lenet5 --dataset mnist --improve_coverage &
+# CUDA_VISIBLE_DEVICES=0 python cycle.py --model_name lenet4 --dataset mnist  &
+# CUDA_VISIBLE_DEVICES=0 python cycle.py --model_name lenet5 --dataset mnist --improve_coverage &
 def cycle(T: int):
-    assert T > 0
 
     # Step 1. Load the current model M_i
-    current_model_path = "{}{}/{}/{}/{}.h5".format(THIS_MODEL_DIR, dataset_name, model_name, is_improve, str(T - 1))
+    
+    current_model_path = "{}{}/{}/{}/{}.h5".format(THIS_MODEL_DIR, dataset_name, model_name, is_improve, str(0))
+    # else:
+    #     current_model_path = "{}{}/{}/{}/{}.h5".format(THIS_MODEL_DIR, dataset_name, model_name, is_improve, str(T-1))
     current_model = load_model(current_model_path)
 
     # Step 2. According to the current M_i and dataset, generate examples T_i
@@ -129,54 +133,54 @@ def cycle(T: int):
 
     data_folder = 'fuzzing/{}/{}/{}'.format(dataset_name, model_name, is_improve)
     os.makedirs(data_folder, exist_ok=True)
-    
-    if not os.path.exists(os.path.join(data_folder, "new_images.npy")):
-        print("Log: Start do transformation in images")
-        new_images = []
-        for i in tqdm(range(len(x_train))):
-            new_images.append(mutate(x_train[i]))
-        np.save(os.path.join(data_folder, "new_images.npy"), new_images)
-    else:
-        print("Log: Load mutantions.")
-        new_images = np.load(os.path.join(data_folder, "new_images.npy"))
+    if not T == 0:
+        if not os.path.exists(os.path.join(data_folder, "new_images.npy")):
+            print("Log: Start do transformation in images")
+            new_images = []
+            for i in tqdm(range(len(x_train))):
+                new_images.append(mutate(x_train[i]))
+            np.save(os.path.join(data_folder, "new_images.npy"), new_images)
+        else:
+            print("Log: Load mutantions.")
+            new_images = np.load(os.path.join(data_folder, "new_images.npy"))
 
-    for i in range(1, T):
-        index = np.load('fuzzing/{}/{}/{}/nc_index_{}.npy'.format(dataset_name, model_name, is_improve, i), allow_pickle=True).item()
+        for i in range(1, T):
+            index = np.load('fuzzing/{}/{}/{}/nc_index_{}.npy'.format(dataset_name, model_name, is_improve, i), allow_pickle=True).item()
+            for y, x in index.items():
+                x_train = np.concatenate((x_train, np.expand_dims(x, axis=0)), axis=0)
+                y_train = np.concatenate((y_train, np.expand_dims(y_train[y], axis=0)), axis=0)
+
+        if not os.path.exists(os.path.join(data_folder, 'nc_index_{}.npy'.format(T))):
+            ## Generate new examples
+            nc_index = {}
+            nc_number = 0
+            for i in tqdm(range(5000*(T-1), 5000*(T), 500), desc="Total progress:"):
+                for index, (pred_new, pred_old) in enumerate(zip(softmax(current_model.predict(np.array(new_images[i:i+500]))).argmax(axis=-1), softmax(current_model.predict(x_train[i:i+500])).argmax(axis=-1))):
+                    # find an adversarial example
+                    if pred_new != pred_old:
+                        nc_symbol = compare_nc(current_model, x_train, y_train, x_test, y_test, new_images[i+index], x_train[i+index], model_layer)
+                        if nc_symbol and improve_coverage:
+                            # new image can cover more neurons, and we want such improvements
+                                nc_index[i+index] = new_images[i+index]
+                                nc_number += 1
+                        
+                        if (not improve_coverage) and (not nc_symbol):
+                            # new image CANNOT cover more neurons, and we want examples cannot improve coverage
+                                nc_index[i+index] = new_images[i+index]
+                                nc_number += 1
+
+
+            print("Log: new image can/cannot cover more neurons: {}".format(nc_number))
+            
+            np.save(os.path.join(data_folder, 'nc_index_{}.npy'.format(T)), nc_index)
+
+        # Step 3. Retrain M_i against T_i, to obtain M_{i+1}
+        ## Augment the newly generate examples into the training data
+
+        index = np.load(os.path.join(data_folder, 'nc_index_{}.npy'.format(T)), allow_pickle=True).item()
         for y, x in index.items():
             x_train = np.concatenate((x_train, np.expand_dims(x, axis=0)), axis=0)
             y_train = np.concatenate((y_train, np.expand_dims(y_train[y], axis=0)), axis=0)
-
-    if not os.path.exists(os.path.join(data_folder, 'nc_index_{}.npy'.format(T))):
-        ## Generate new examples
-        nc_index = {}
-        nc_number = 0
-        for i in tqdm(range(5000*(T-1), 5000*(T), 500), desc="Total progress:"):
-            for index, (pred_new, pred_old) in enumerate(zip(softmax(current_model.predict(np.array(new_images[i:i+500]))).argmax(axis=-1), softmax(current_model.predict(x_train[i:i+500])).argmax(axis=-1))):
-                # find an adversarial example
-                if pred_new != pred_old:
-                    nc_symbol = compare_nc(current_model, x_train, y_train, x_test, y_test, new_images[i+index], x_train[i+index], model_layer)
-                    if nc_symbol and improve_coverage:
-                        # new image can cover more neurons, and we want such improvements
-                            nc_index[i+index] = new_images[i+index]
-                            nc_number += 1
-                    
-                    if (not improve_coverage) and (not nc_symbol):
-                        # new image CANNOT cover more neurons, and we want examples cannot improve coverage
-                            nc_index[i+index] = new_images[i+index]
-                            nc_number += 1
-
-
-        print("Log: new image can/cannot cover more neurons: {}".format(nc_number))
-        
-        np.save(os.path.join(data_folder, 'nc_index_{}.npy'.format(T)), nc_index)
-
-    # Step 3. Retrain M_i against T_i, to obtain M_{i+1}
-    ## Augment the newly generate examples into the training data
-
-    index = np.load(os.path.join(data_folder, 'nc_index_{}.npy'.format(T)), allow_pickle=True).item()
-    for y, x in index.items():
-        x_train = np.concatenate((x_train, np.expand_dims(x, axis=0)), axis=0)
-        y_train = np.concatenate((y_train, np.expand_dims(y_train[y], axis=0)), axis=0)
 
 
     # Step 4. Evaluate the current model
@@ -185,16 +189,18 @@ def cycle(T: int):
     print("\nEvaluate coverage ......")
     evaluate_coverage(current_model, l, T, x_train, y_train, x_test, y_test)
 
+
+    ## Retrain the model
+    if not T == 0:
+        retrained_model = retrain(current_model, x_train, y_train, x_test, y_test, batch_size=128, epochs=5)
+        new_model_path = "{}{}/{}/{}/{}.h5".format(THIS_MODEL_DIR, dataset_name, model_name, is_improve, str(T))
+        retrained_model.save(new_model_path)
+    
     ## Evaluate robustness
     print("\nEvaluate robustness ......")
     store_path = 'new_test/{}/{}'.format(dataset_name, model_name)
     x_test_new = np.load(os.path.join(store_path, 'x_test_new.npy'),  allow_pickle=True)
     evaluate_robustness(T, current_model, x_test, y_test, x_test_new)
-
-    ## Retrain the model
-    retrained_model = retrain(current_model, x_train, y_train, x_test, y_test, batch_size=128, epochs=5)
-    new_model_path = "{}{}/{}/{}/{}.h5".format(THIS_MODEL_DIR, dataset_name, model_name, is_improve, str(T))
-    retrained_model.save(new_model_path)
 
     print("Done\n")
 
@@ -222,5 +228,5 @@ if __name__ == '__main__':
     new_model_path = "{}{}/{}/{}/{}.h5".format(THIS_MODEL_DIR, dataset_name, model_name, is_improve, str(0))
     model.save(new_model_path)
 
-    for order_number in range(1, 11):
+    for order_number in range(0, 11):
         cycle(order_number)
