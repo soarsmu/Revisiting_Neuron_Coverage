@@ -1,4 +1,4 @@
-# Replication Study for "Correlations Between Deep Neural Network Model Coverage Criteria and Model Quality"
+# Revisiting Neuron Coverage Metrics and Quality of Deep Neural Networks
 
 ## Environment Configuration
 ### Docker 
