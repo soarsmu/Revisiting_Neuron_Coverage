@@ -4,7 +4,7 @@
 ### Docker 
 ```bash
 docker pull zhouyang996/covtesting
-docker run --name=covtesting --gpus all --shm-size 32G -it --mount type=bind,src=path_to_covtesting_folder,dst=/workspace tensorflow/zhouyang996/covtesting
+docker run --rm --name=covtesting --gpus all --shm-size 32G -it --mount type=bind,src=path_to_revisiting_neuron_coverage_folder,dst=/workspace zhouyang996/covtesting
 ```
 
 Download the `adversarial-robustness-toolbox` and install necessary libraries using the following commands,
